@@ -1,0 +1,59 @@
+steps:
+  # Build the Container Image
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      [
+        "build",
+        "-t",
+        "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_ARTIFACT_REPOSITORY_NAME}/${_IMAGE_NAME}:${SHORT_SHA}",
+        ".",
+      ]
+  # Push the container image to Artifact Registry
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      [
+        "push",
+        "${_REGION}-docker.pkg.dev/$PROJECT_ID/${_ARTIFACT_REPOSITORY_NAME}/${_IMAGE_NAME}:${SHORT_SHA}",
+      ]
+  # Get Image SHA from Artifact Registry
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    entrypoint: /bin/bash
+    args:
+      - -c
+      - |
+        gcloud artifacts docker images describe \
+        ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REPOSITORY_NAME}/${_IMAGE_NAME}:${SHORT_SHA} \
+        --format 'value(image_summary.digest)' > /workspace/image-sha.txt
+  # Attest Image for Binary Authorization
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    entrypoint: /bin/bash
+    args:
+      - -c
+      - |
+        gcloud beta container binauthz attestations sign-and-create \
+        --project="${PROJECT_ID}" \
+        --artifact-url="${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REPOSITORY_NAME}/${_IMAGE_NAME}@`cat /workspace/image-sha.txt`" \
+        --attestor="${_ATTESTOR_NAME}" \
+        --attestor-project="${PROJECT_ID}" \
+        --keyversion-project="${PROJECT_ID}" \
+        --keyversion-keyring="${_KEYRING_NAME}" \
+        --keyversion-location="${_REGION}" \
+        --keyversion-key="${_KEY_NAME}" \
+        --keyversion="${_KEY_VERSION}"
+  # Create Release in Google Cloud Deploy
+
+#  - name: gcr.io/google.com/cloudsdktool/cloud-sdk
+#    entrypoint: gcloud
+#    args:
+#      [
+#        "deploy", "releases", "create", "rel-${SHORT_SHA}",
+#        "--delivery-pipeline", "opapipeline",
+#        "--region", "${_REGION}",
+#        "--images", "my-app-image=${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REPOSITORY_NAME}/${_IMAGE_NAME}:${SHORT_SHA}"
+#      ]
+#  # Deploy Container Image to Cloud Run
+#  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+#    entrypoint: gcloud
+#    args: ['run', 'deploy', 'opaservice', '--image', '${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REPOSITORY_NAME}/${_IMAGE_NAME}:${SHORT_SHA}', '--region', '${_REGION}', '--allow-unauthenticated', '--binary-authorization', 'default', '--port', '443', '--service-account', 'compliance-automation@slz-cac-playground-a9sj.iam.gserviceaccount.com']
+#images:
+#- ${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_ARTIFACT_REPOSITORY_NAME}/${_IMAGE_NAME}:${SHORT_SHA}

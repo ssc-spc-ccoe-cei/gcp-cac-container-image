@@ -1,0 +1,13 @@
+apiVersion: skaffold/v3alpha1
+kind: Config
+metadata: 
+  name: opapipeline
+profiles:
+- name: dev
+  manifests:
+    rawYaml:
+    - run-dev.yaml
+deploy:
+  cloudrun: 
+    projectid: 
+    region: northamerica-northeast1
