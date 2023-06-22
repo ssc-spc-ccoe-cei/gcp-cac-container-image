@@ -1,5 +1,5 @@
 #update following for image update next time
-FROM  python:3.11.3-alpine3.18 AS python-build
+FROM  python:3.11.4-alpine3.18 AS python-build
 COPY ["app.py", "requirements.txt", "./"]
 RUN apk add  --no-cache --virtual .build-deps gcc musl-dev  make automake gcc g++ subversion python3-dev libstdc++ 
 
@@ -12,11 +12,11 @@ RUN pip install --upgrade pip setuptools wheel pyinstaller && \
 FROM  python-build AS opa-build
 #update OPA in following line.
 RUN apk add curl && \
-    curl -L -o opa https://github.com/open-policy-agent/opa/releases/download/v0.52.0/opa_linux_amd64_static \
+    curl -L -o opa https://github.com/open-policy-agent/opa/releases/download/v0.53.1/opa_linux_amd64_static \
     && chmod 755 ./opa && \
     apk del curl
 #update following for image update next time
-FROM gcr.io/google.com/cloudsdktool/cloud-sdk:432.0.0-alpine
+FROM gcr.io/google.com/cloudsdktool/cloud-sdk:435.0.1-alpine
 
 RUN rm /usr/local/bin/docker
 RUN rm /google-cloud-sdk/bin/gcloud-crc32c	
