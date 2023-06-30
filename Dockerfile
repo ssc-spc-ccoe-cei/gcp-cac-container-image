@@ -12,11 +12,11 @@ RUN pip install --upgrade pip setuptools wheel pyinstaller && \
 FROM  python-build AS opa-build
 #update OPA in following line.
 RUN apk add curl && \
-    curl -L -o opa https://github.com/open-policy-agent/opa/releases/download/v0.53.1/opa_linux_amd64_static \
+    curl -L -o opa https://github.com/open-policy-agent/opa/releases/download/v0.54.0/opa_linux_amd64_static \
     && chmod 755 ./opa && \
     apk del curl
 #update following for image update next time
-FROM gcr.io/google.com/cloudsdktool/cloud-sdk:435.0.1-alpine
+FROM gcr.io/google.com/cloudsdktool/cloud-sdk:437.0.1-alpine
 
 RUN rm /usr/local/bin/docker
 #removing unnesscary packages
