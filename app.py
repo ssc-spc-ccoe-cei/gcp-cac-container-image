@@ -59,7 +59,7 @@ scc_logs = []
 logger_resource_name = [f"organizations/{org_id}"]
 # howmany days to fetch from
 days_back_admin = 1
-hours_back_cloudaudit = 6
+hours_back_cloudaudit = 26
 
 f_name = f"results-{org_name}.json"
 export_output_name = "temp.ndjson"
