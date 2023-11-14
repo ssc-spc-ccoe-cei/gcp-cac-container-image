@@ -98,8 +98,8 @@ logger_export_adminapis_admin = (
 # define logger_export_adminapis_cloudaudit
 logger_export_adminapis_cloudaudit = (
     f'protoPayload.@type="type.googleapis.com/google.cloud.audit.AuditLog"'
-    f'protoPayload.resourceName="organizations/{org_id}"'
-    f'protoPayload.serviceName="logging.googleapis.com"'
+    f' AND protoPayload.resourceName="organizations/{org_id}"'
+    f' AND protoPayload.serviceName="logging.googleapis.com"'
     f' AND timestamp>="{(datetime.now(timezone.utc) - timedelta(hours=hours_back_cloudaudit)).strftime("%Y-%m-%dT%H:%M:%S.%f%z")}"'
     f' AND timestamp<"{(datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f%z"))}"'
 )
