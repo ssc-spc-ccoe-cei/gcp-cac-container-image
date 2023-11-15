@@ -59,7 +59,7 @@ scc_logs = []
 logger_resource_name = [f"organizations/{org_id}"]
 # howmany days to fetch from
 days_back_admin = 1
-hours_back_cloudaudit = 20
+days_back_cloudaudit = 2
 
 f_name = f"results-{org_name}.json"
 export_output_name = "temp.ndjson"
@@ -97,10 +97,8 @@ logger_export_adminapis_admin = (
 
 # define logger_export_adminapis_cloudaudit
 logger_export_adminapis_cloudaudit = (
-    f'protoPayload.@type="type.googleapis.com/google.cloud.audit.AuditLog"'
-    f' AND protoPayload.resourceName="organizations/{org_id}"'
-    f' AND protoPayload.serviceName="logging.googleapis.com"'
-    f' AND timestamp>="{(datetime.now(timezone.utc) - timedelta(hours=hours_back_cloudaudit)).strftime("%Y-%m-%dT%H:%M:%S.%f%z")}"'
+    f'logName="organizations/{org_id}/logs/cloudaudit.googleapis.com%2Fdata_access"'
+    f' AND timestamp>="{(datetime.now(timezone.utc) - timedelta(days=days_back_cloudaudit)).strftime("%Y-%m-%dT%H:%M:%S.%f%z")}"'
     f' AND timestamp<"{(datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f%z"))}"'
 )
 
