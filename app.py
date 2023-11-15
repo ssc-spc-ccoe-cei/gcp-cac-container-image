@@ -98,7 +98,7 @@ logger_export_adminapis_admin = (
 # define logger_export_adminapis_cloudaudit
 logger_export_adminapis_cloudaudit = (
     f'logName="organizations/{org_id}/logs/cloudaudit.googleapis.com%2Fdata_access"'
-    f' AND timestamp>="{(datetime.now(timezone.utc) - timedelta(hours=days_back_cloudaudit)).strftime("%Y-%m-%dT%H:%M:%S.%f%z")}"'
+    f' AND timestamp>="{(datetime.now(timezone.utc) - timedelta(hours=hours_back_cloudaudit)).strftime("%Y-%m-%dT%H:%M:%S.%f%z")}"'
     f' AND timestamp<"{(datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f%z"))}"'
 )
 
