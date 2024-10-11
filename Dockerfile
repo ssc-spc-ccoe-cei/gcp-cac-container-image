@@ -1,5 +1,5 @@
 #update following for image update next time
-FROM  python:3.13.0-alpine3.19 AS python-build 
+FROM  python:3.13.0-alpine3.20 AS python-build 
 COPY ["app.py", "requirements.txt", "./"]
 RUN apk add  --no-cache --virtual .build-deps gcc musl-dev  make automake gcc g++ subversion python3-dev libstdc++ 
 
