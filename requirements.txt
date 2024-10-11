@@ -1,11 +1,10 @@
-#adding comments
-flask == 3.0.0
-requests == 2.31.0
-waitress == 2.1.2
-google-auth == 2.24.0
-google-cloud-storage == 2.13.0
-marshmallow == 3.20.1
-google-cloud-asset == 3.20.1
-protobuf == 4.25.1
-google-cloud-logging == 3.8.0
-google-cloud-securitycenter == 1.24.1
+flask == 3.0.3
+requests == 2.32.3
+waitress == 3.0.0
+google-auth == 2.35.0
+google-cloud-storage == 2.18.2
+marshmallow == 3.22.0
+google-cloud-asset == 3.26.4
+protobuf == 5.28.2
+google-cloud-logging == 3.11.2
+google-cloud-securitycenter == 1.34.0
