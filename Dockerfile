@@ -21,7 +21,7 @@ FROM gcr.io/google.com/cloudsdktool/cloud-sdk:496.0.0-alpine
 RUN rm /usr/local/bin/docker
 #removing unnesscary packages
 RUN rm /google-cloud-sdk/bin/gcloud-crc32c	
-#RUN rm /google-cloud-sdk/bin/anthoscli	
+RUN rm /google-cloud-sdk/bin/anthoscli	
 
 RUN addgroup  cac-user \
     && adduser cac-user -D -G cac-user  \
