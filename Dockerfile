@@ -1,5 +1,5 @@
 #update following for image update next time
-FROM  python:3.13.0-alpine3.20 AS python-build 
+FROM  python:3.12.7-alpine3.20 AS python-build 
 COPY ["app.py", "requirements.txt", "./"]
 RUN apk add  --no-cache --virtual .build-deps gcc musl-dev  make automake gcc g++ subversion python3-dev libstdc++ 
 
@@ -21,7 +21,7 @@ FROM gcr.io/google.com/cloudsdktool/cloud-sdk:496.0.0-alpine
 RUN rm /usr/local/bin/docker
 #removing unnesscary packages
 RUN rm /google-cloud-sdk/bin/gcloud-crc32c	
-RUN rm /google-cloud-sdk/bin/anthoscli	
+#RUN rm /google-cloud-sdk/bin/anthoscli	
 
 RUN addgroup  cac-user \
     && adduser cac-user -D -G cac-user  \
