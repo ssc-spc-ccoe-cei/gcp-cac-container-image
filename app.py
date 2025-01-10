@@ -1,29 +1,29 @@
 #!/usr/local/bin/python
 # -*- coding: latin-1 -*-
 
-import multiprocessing
 import google.cloud.asset_v1 as asset_v1
 from google.protobuf.json_format import MessageToDict
 import google.cloud.securitycenter as securitycenter
 import google.cloud.logging
 import google.cloud.storage as storage
 import google.auth
+from googleapiclient.discovery import build
+import concurrent.futures
+import threading
 
-from flask import Flask
-from flask import jsonify
+from flask import Flask, jsonify
 import json
 from marshmallow import Schema, fields
-
-
 import requests
 from waitress import serve
-import subprocess
 import os
-
 import logging
 import time
+import re
 from datetime import datetime, timedelta, timezone
+from cryptography import x509
 
+# Logger setup
 logger = logging.getLogger()
 handler = logging.StreamHandler()
 formatter = logging.Formatter('%(asctime)s %(levelname)s:%(message)s')
@@ -31,42 +31,67 @@ handler.setFormatter(formatter)
 logger.addHandler(handler)
 logger.setLevel(logging.INFO)
 
+# Environment configurations
 port = int(os.environ.get("PORT", 8080))
-
 profile_level = os.environ['GC_PROFILE']
 bucket_name = os.environ['GCS_BUCKET']
 project = os.environ['GCP_PROJECT']
 org_id = os.environ['ORG_ID']
 org_name = os.environ['ORG_NAME']
+policy_version = os.environ['POLICY_VERSION']
+app_version = os.environ['APP_VERSION']
+customer_id = os.environ['CUSTOMER_ID'] # your directory customer ID (`gcloud organizations list`)
 
-branch = os.environ['BRANCH']
-repo_url = os.environ['POLICY_REPO']
-repo_name = repo_url.split("/")[-1]
-dest_dir = "/app/policies"
+# your Workspace domain, if env var not provided,
+# it is implied you do not have a Workspace account, then use empty string '' as default
+ws_domain = os.environ.get('WORKSPACE_DOMAIN', '')
+
+credentials, project_id = google.auth.default()
+
+certmanager_resource_id = f"projects/{project_id}/locations/global"
+
 
 asset_parent = f"organizations/{org_id}"
-# content_type = ["RESOURCE"]
-content_type = ["RESOURCE", "ACCESS_POLICY", "IAM_POLICY"]
+content_type_list = ["RESOURCE", "ACCESS_POLICY", "IAM_POLICY"]
 
-asset_export_data = []
+# PROFILE is the Profile level i.e. "Profile 1", "Profile 2", etc.
+# SECURITY_CATEGORY is "Unclassified", "Protected A", etc
+tag_key_list = ["PROFILE", "SECURITY_CATEGORY"]
 
-# The parent of the findings, e.g. organization/folder/project
+lock = threading.Lock()
 scc_parent = f"organizations/{org_id}/sources/-"
-
-# ssc placeholder array
 scc_logs = []
-
 logger_resource_name = [f"organizations/{org_id}"]
-# howmany days to fetch from
+customer_id_parent = f"customers/{customer_id}"
 days_back_admin = 1
-days_back_cloudaudit = 365
-
+hours_back_cloudaudit = 6
 f_name = f"results-{org_name}.json"
-export_output_name = "temp.ndjson"
-export_output_path = f"gs://{bucket_name}/{export_output_name}"
-
 timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
+gcs_folders = [
+    'guardrail-01', 'guardrail-02', 'guardrail-03', 'guardrail-04', 'guardrail-05',
+    'guardrail-06', 'guardrail-07', 'guardrail-08', 'guardrail-09', 'guardrail-10',
+    'guardrail-11', 'guardrail-12', 'guardrail-13', 
+]
+
+gcs_folder_objects = []
+
+credentials, project_id = google.auth.default()
+
+logger_export_adminapis_admin = (
+    f'protoPayload.request.query="parent=organizations/{org_id}"'
+    f' AND protoPayload.serviceName="admin.googleapis.com"'
+    f' AND timestamp>="{(datetime.now(timezone.utc) - timedelta(days=days_back_admin)).strftime("%Y-%m-%dT%H:%M:%S.%f%z")}"'
+    f' AND timestamp<"{(datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f%z"))}"'
+)
+
+logger_export_adminapis_cloudaudit = (
+    f'logName="organizations/{org_id}/logs/cloudaudit.googleapis.com%2Factivity"'
+    f' AND timestamp>="{(datetime.now(timezone.utc) - timedelta(hours=hours_back_cloudaudit)).strftime("%Y-%m-%dT%H:%M:%S.%f%z")}"'
+    f' AND timestamp<"{(datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f%z"))}"'
+)
+
+# Schema for JSON outputs
 class JSONObjectSchema(Schema):
     timestamp = fields.Str(dump_default=timestamp)
     profile_level = fields.Str(dump_default=profile_level)
@@ -78,290 +103,375 @@ class JSONObjectSchema(Schema):
     status = fields.Str()
     msg = fields.Str()
     asset_name = fields.Str()
-
-
-
-output_config = {
-    "gcs_destination": {
-        "uri": export_output_path
-    }
-}
-
-# define logger_export_adminapis_admin
-logger_export_adminapis_admin = (
-    f'protoPayload.request.query="parent=organizations/{org_id}"'
-    f' AND protoPayload.serviceName="admin.googleapis.com"'
-    f' AND timestamp>="{(datetime.now(timezone.utc) - timedelta(days=days_back_admin)).strftime("%Y-%m-%dT%H:%M:%S.%f%z")}"'
-    f' AND timestamp<"{(datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f%z"))}"'
-)
-
-# define logger_export_adminapis_cloudaudit
-logger_export_adminapis_cloudaudit = (
-    f'logName="organizations/{org_id}/logs/cloudaudit.googleapis.com%2Factivity"'
-    f' AND resource.type="folder"'
-    f' OR resource.type="project"'
-    f' OR resource.type="logging_sink"'
-    f' AND timestamp>="{(datetime.now(timezone.utc) - timedelta(days=days_back_cloudaudit)).strftime("%Y-%m-%dT%H:%M:%S.%f%z")}"'
-    f' AND timestamp<"{(datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f%z"))}"'
-)
-
-
-# Define the list of folder names.
-gcs_folders = ['guardrail-01', 'guardrail-02', 'guardrail-03', 'guardrail-04', 'guardrail-05', 'guardrail-06',
-               'guardrail-07', 'guardrail-08', 'guardrail-09', 'guardrail-10', 'guardrail-11', 'guardrail-12']
-
-# Define a list to hold the folder objects.
-gcs_folder_objects = []
-pool = multiprocessing.Pool()
+    policy_version = fields.Str(dump_default=policy_version)
+    app_version = fields.Str(dump_default=app_version)
+    
 
 app = Flask(__name__)
 
 
+#----------------------------------------
+# HELPER FUNCTIONS
+#----------------------------------------
+def decode_cert(cert_data):
+    """Decodes cert data
+    Args:
+        cert_data: encrypted cert data (string)
 
-def run_server(destination):
-    # Opa server mode
+    Returns:
+        cryptography.x509.Certificate class
+    """
+    try:
+        # you need to perform a str.encode on the data as we're not reading a file and passing in a string instead
+        cert = x509.load_pem_x509_certificate(str.encode(cert_data))
+    except ValueError:
+        try:
+            cert = x509.load_der_x509_certificate(str.encode(cert_data))
+        except ValueError:
+            print("Error: Cloud not decode certificate. Invalid PEM or DER format.")
+            return None
 
-    subprocess.Popen(f"/app/opa run --server --addr localhost:8181 {destination}/{repo_name}/policies/ --format=values",
-                     shell=True, start_new_session=True)
-    time.sleep(1.0)
-
-
-def clone_or_pull_repo(repo_url, dest_dir, repo_name):
-    if os.path.exists(f"{dest_dir}/{repo_name}"):
-        # If the destination directory exists, check if it's the correct repository
-        result = subprocess.run(
-            ["git", "remote", "get-url", "origin"], cwd=f"{dest_dir}/{repo_name}", capture_output=True)
-        remote_url = result.stdout.strip().decode("utf-8")
-        if remote_url == repo_url:
-            # If it's the correct repository, run 'git pull' to update it
-            logger.info("Updating existing policies")
-            subprocess.run(["git", "pull", "origin", branch],
-                           cwd=f"{dest_dir}/{repo_name}")
-            logger.info("Update completed.")
-
-        else:
-            # If it's not the correct repository, print an error message
-            print(
-                f"Destination directory already exists but is not the correct repository ({remote_url} instead of {repo_url}).")
-    else:
-        # If the destination directory does not exist, run 'git clone' to clone the repository
-        logger.info("Policies not found, cloning repository")
-        os.mkdir(dest_dir)
-        subprocess.run(["git", "clone", repo_url], cwd=dest_dir)
-        subprocess.run(["git", "switch", branch],
-                       cwd=f"{dest_dir}/{repo_name}")
-        subprocess.run(["ls", dest_dir])
-        print("Cloning completed.")
-
-# upload string to blob
+    return cert
 
 
+def extract_issuer(cert):
+    """Extract Issuer Org info
+    Args:
+        cert: cert (cryptography.x509.Certificate)
+
+    Returns:
+        Certificate issuer org (string)
+    """
+    if cert is None:
+        return
+
+    issuer_info = cert.issuer.rfc4514_string()
+    split_fields = issuer_info.split(",")
+    org_regex = r"\bO=[^\s]+"   # matches O=cert_issuer_org_name_here
+
+    for i in range(len(split_fields)):
+        org_regex_match = re.findall(org_regex, split_fields[i])
+        if org_regex_match != []:
+            match = split_fields[i]
+            issuer_org = match.split("=")[1]    # discard the 0= part
+
+    return issuer_org
+
+
+
+#----------------------------------------
+# DATA EXPORT FUNCTIONS
+#----------------------------------------
+# Export assets to GCS
+def export_assets_to_gcs(asset_parent, content_type):
+    client = asset_v1.AssetServiceClient(credentials=credentials)
+    export_output_name = f"temp_{content_type}.ndjson"
+    export_output_path = f"gs://{bucket_name}/{export_output_name}"
+    output_config = {"gcs_destination": {"uri": export_output_path}}
+
+    logger.info(f"Exporting {content_type} to {export_output_path}")
+    operation = client.export_assets(
+        request={"parent": asset_parent, "output_config": output_config, "content_type": content_type}
+    )
+    operation.result()
+    logger.info(f"Completed export for {content_type}")
+    return export_output_name
+
+# Batch download JSON from GCS
+def download_from_gcs(bucket_name, file_names):
+    def process_file(file_name):
+        try:
+            logger.info(f"Downloading {file_name} from Cloud Storage")
+            storage_client = storage.Client(credentials=credentials, project=project_id)
+            bucket = storage_client.bucket(bucket_name)
+            blob = bucket.blob(file_name)
+
+            # Download and parse JSON data
+            json_data = blob.download_as_string().decode("utf-8").splitlines()
+            parsed_data = [json.loads(line) for line in json_data if line.strip()]
+
+            logger.info(f"Downloaded {file_name}")
+            return parsed_data
+        except Exception as e:
+            logger.error(f"Error processing {file_name}: {e}")
+            return []
+
+    combined_data = []
+    with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
+        futures = {executor.submit(process_file, file_name): file_name for file_name in file_names}
+        for future in concurrent.futures.as_completed(futures):
+            try:
+                combined_data.extend(future.result())
+            except Exception as e:
+                logger.error(f"Error in batch processing: {e}")
+    return combined_data
+
+# Batch upload JSON to GCS
+def batch_upload_json_to_gcs(bucket_name, upload_tasks):
+    def upload_task(task):
+        json_data, file_name = task
+        upload_json_to_gcs(bucket_name, json_data, file_name)
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+        futures = {executor.submit(upload_task, task): task for task in upload_tasks}
+        for future in concurrent.futures.as_completed(futures):
+            try:
+                future.result()
+            except Exception as e:
+                logger.error(f"Error in batch upload: {e}")
+
+# Upload JSON to GCS
 def upload_json_to_gcs(bucket_name, json_data, file_name):
-    logger.info(f"Uploading {file_name} to Cloud Storage")
-    client = storage.Client(credentials=credentials, project=project_id)
-    bucket = client.bucket(bucket_name)
-    blob = bucket.blob(file_name)
+    try:
+        logger.info(f"Uploading {file_name} to Cloud Storage")
+        client = storage.Client(credentials=credentials, project=project_id)
+        bucket = client.bucket(bucket_name)
+        blob = bucket.blob(file_name)
 
-    # convert the JSON data to a string
-    data = json.dumps(json_data)
-    if file_name.startswith("results"):
-        data = ((data[1:-1]).replace("}, {", "}{").replace('}{','}\n{'))
-        
-    # upload the string data to the bucket
-    blob.upload_from_string(data)
-    
+        data = json.dumps(json_data, separators=(',', ':'))
+        blob.upload_from_string(data)
+        logger.info(f"Uploaded {file_name} to Cloud Storage")
+    except Exception as e:
+        logger.error(f"Error uploading {file_name}: {e}")
 
-
-
-credentials, project_id = google.auth.default()
-# run opa server
-
-clone_or_pull_repo(repo_url, dest_dir, repo_name)
-
-run_server(dest_dir)
-
-
-# asset export and data parsing section:
-
-
-def opa_input_data(data):
-    data = {
-        "input": {
-            "data": data
+# Parallelized asset export
+def parallelized_asset_export(asset_parent, content_type_list):
+    exported_files = []
+    with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+        futures = {
+            executor.submit(export_assets_to_gcs, asset_parent, content_type): content_type
+            for content_type in content_type_list
         }
-    }
-    opa_ready = json.dumps(data)
-    data = json.loads(opa_ready)
-    return data
+        for future in concurrent.futures.as_completed(futures):
+            try:
+                exported_files.append(future.result())
+            except Exception as e:
+                logger.error(f"Error in asset export: {e}")
 
+    return download_from_gcs(bucket_name, exported_files)
 
-def asset_export(parent, output_config, content_type):
-
-    client = asset_v1.AssetServiceClient(
-        credentials=credentials)
-    operation = client.export_assets(request={"parent": parent, "output_config": output_config,
-                                              "content_type": content_type})
-    logger.info(f"Getting Cloud Asset Inventory metadata for content type: {content_type}")
-    logger.info(operation.result())
-    time.sleep(1.0)
-
-
-def string_to_json(string):
-    # Split the string on newline
-    split_string = string.split("\n")
-    # Format each split string as a separate JSON object
-    json_objects = [json.loads(s) for s in split_string if s]
-    # Join the JSON objects together using a comma
-    return json.dumps(json_objects, separators=(',', ':'))
-
-
-def download_json_from_gcs(bucket_name, file_name):
-    # Connect to Google Cloud Storage
-    logger.info(f"Getting {file_name} from Cloud Storage")
-    storage_client = storage.Client(
-        credentials=credentials, project=project_id)
-    bucket = storage_client.bucket(bucket_name)
-    blob = bucket.blob(file_name)
-
-    # Download the asset export file
-    json_data = blob.download_as_string().decode("utf-8")
-    # Repair the asset export to actual json
-    valid_json = string_to_json(json_data)
-    data = json.loads(valid_json)
-
-    # Delete the file from GCS
-    blob.delete()
-
-    return data
-
-
-# scc export function
-
+# SCC Export
 def scc_export(scc_logs, scc_parent):
     logger.info("Compiling SCC Data")
-    scc_client = securitycenter.SecurityCenterClient(
-        credentials=credentials)
+    scc_client = securitycenter.SecurityCenterClient(credentials=credentials)
     finding_result_iterator = scc_client.list_findings(
         request={"parent": scc_parent, "filter": 'state="ACTIVE"'}
     )
-    for i, finding_result in enumerate(finding_result_iterator):
-
+    for finding_result in finding_result_iterator:
         keyword_ideas_json = MessageToDict(finding_result._pb)
         scc_logs.append(keyword_ideas_json)
-    return json.dumps(scc_logs, ensure_ascii=False, separators=(',', ': '))
+    return json.dumps(scc_logs, separators=(',', ':'))
 
-
+# Logger export
 def logger_export(filter_str1, filter_str2, logger_resource_name):
-    # query and print all matching logs
     logger.info("Compiling Logging Data")
-    client = google.cloud.logging.Client(
-        credentials=credentials)
+    client = google.cloud.logging.Client(credentials=credentials)
     logs = []
     for entry in client.list_entries(filter_=filter_str1, resource_names=logger_resource_name):
-
         logs.append(entry.to_api_repr())
-
     for entry in client.list_entries(filter_=filter_str2, resource_names=logger_resource_name):
-
         logs.append(entry.to_api_repr())
+    return json.dumps(logs, separators=(',', ':'))
 
-    return (json.dumps(logs, separators=(',', ': ')))
-
-# Iterate over the list of folder names.
-
-
+# GCS folder export
 def gcs_export(gcs_folders, gcs_folder_objects, bucket_name):
-    for folder_name in gcs_folders:
-        # Get the list of files in the folder.
-        file_names = get_files_in_folder(folder_name, bucket_name)
-        # Create the folder object.
-        folder_object = {
-            "name": folder_name,
-            "files": file_names
-        }
-        # Append the folder object to the list of folder objects.
-        gcs_folder_objects.append(folder_object)
-    return json.dumps(gcs_folder_objects, separators=(',', ': '))
-
-# Define a function to retrieve the list of objects in a folder.
-
-
-def get_files_in_folder(folder_name, bucket):
     logger.info("Compiling GCS Data")
     client = storage.Client(credentials=credentials, project=project_id)
+    for folder_name in gcs_folders:
+        blobs = client.list_blobs(bucket_name, prefix=f"{folder_name}/")
+        files = [blob.name for blob in blobs]
+        gcs_folder_objects.append({"name": folder_name, "files": files})
+    return json.dumps(gcs_folder_objects, separators=(',', ':'))
 
-    # Get a reference to the bucket containing the folder.
-    bucket = client.get_bucket(bucket)
-    # Get a list of blobs in the folder.
-    blobs = bucket.list_blobs(prefix=folder_name + '/')
-    # Extract the names of the blobs.
-    file_names = [blob.name.split('/')[-1] for blob in blobs]
-    # Return the list of file names.
-    return file_names
+# Essential Contacts export
+def essentialcontacts_export(asset_parent):
+    logger.info("Compiling Essential Contacts Data")
+    ec_client = build("essentialcontacts", "v1", credentials=credentials)
+    request = ec_client.organizations().contacts().list(parent=asset_parent)
+    results = request.execute()
+    ec_contacts = []
+    try:
+        for contact in results["contacts"]:
+            ec_contacts.append(contact)
+    except KeyError:
+        print("WARNING: No Essential Contacts are setup in org")
+        pass
+    return json.dumps(ec_contacts, separators=(',', ':'))
+
+# Workspace export
+def workspace_users_export(ws_domain):
+    logger.info("Compiling Workspace User Data")
+    # if ws_domain is NOT set
+    if ws_domain == '':
+        return []
+    # if ws_domain is set
+    ws_client = build("admin", "directory_v1", credentials=credentials)
+    request = ws_client.users().list(domain=ws_domain)
+    results = request.execute()
+    return json.dumps(results, separators=(',', ':'))
+
+# Access Context Manager policy access levels export
+def acm_export(asset_parent):
+    logger.info("Compiling Access Context Manager Data")
+    acm_client = build("accesscontextmanager", "v1", credentials=credentials)
+    request = acm_client.accessPolicies().list(parent=asset_parent)
+    results = request.execute()
+    # get a list of ACM policies that is not the "default policy"
+    acm_policy_list = []
+    for policy in results["accessPolicies"]:
+        if policy["title"] != "default policy":
+            acm_policy_list.append(policy["name"])
+    # ACM access levels contain the IP CIDR restrictions
+    acm_access_levels = []
+    for acm_policy in acm_policy_list:
+        request = acm_client.accessPolicies().accessLevels().list(parent=acm_policy)
+        results = request.execute()
+        acm_access_levels.append({"kind": "accesscontextmanager#accesspolicy", "policyName": acm_policy, "config": results})
+    return json.dumps(acm_access_levels, separators=(',', ':'))
+
+# Org Admin Group member export
+def org_admin_group_member_export(customer_id_parent, ws_domain):
+    logger.info("Compiling Org Admin Group Member Data")
+    cloudidentity_client = build("cloudidentity", "v1", credentials=credentials)
+    # find group name
+    request = cloudidentity_client.groups().list(parent=customer_id_parent)
+    results = request.execute()
+    for group in results["groups"]:
+        if group["groupKey"]["id"] == f"gcp-organization-admins@{ws_domain}":
+            group_name = group["name"]
+    # find group membership
+    request = cloudidentity_client.groups().memberships().list(parent=group_name)
+    results = request.execute()
+    member_list = []
+    for membership in results["memberships"]:
+        # prepending "user:" to the user email to align with output from GCP role bindings
+        user = "user:" + membership["preferredMemberKey"]["id"]
+        member_list.append(user)
+    # compiling final output JSON
+    org_admin_member_list = []
+    org_admin_member_list.append({"kind": "cloudidentity#groups#membership", "groupName": group_name, "groupEmail": f"gcp-organization-admins@{ws_domain}", "members": member_list})
+    return json.dumps(org_admin_member_list, separators=(',', ':'))
+
+# Resource Tag Value export
+def org_resource_tag_value_export(customer_id_parent, tag_key_list):
+    logger.info("Compiling Org Resource Direct Tagging Data")
+    asset_client = asset_v1.AssetServiceClient(credentials=credentials)
+    tagged_resources_list = []
+    for tag_key in tag_key_list:
+        # querying for tagKeys for finding directly attached ONLY
+        # querying for effectiveTagKeys for finding directly attached or inherited tags, however, not all resources support effectiveTagKeys
+        request = asset_v1.SearchAllResourcesRequest(scope=customer_id_parent, query=f"effectiveTagKeys:{tag_key}")
+        page_result = asset_client.search_all_resources(request=request)
+        for response in page_result:
+            for i in range(len(response.tags)):
+                new_object = {"kind": "cloudresourcemanager#tagged#asset", "name": response.name, "parent": response.parent_full_resource_name, "asset_type": response.asset_type, "display_name": response.display_name, "location": response.location, "tag_key": response.tags[i].tag_key, "tag_value": response.tags[i].tag_value}
+                if new_object not in tagged_resources_list:
+                    tagged_resources_list.append(new_object)
+                else:
+                    pass
+    return json.dumps(tagged_resources_list, separators=(',', ':'))
+
+# Certificate Manager Cert Issuer export - applies only to Direct Tags
+def certmanager_export(certmanager_resource_id):
+    service = build('certificatemanager', 'v1')
+    request = service.projects().locations().certificates().list(parent=certmanager_resource_id)
+    results = request.execute()
+    certificates_list = []
+    for i in range(len(results["certificates"])):
+        cert_data = results["certificates"][i]["pemCertificate"]
+        decoded_cert = decode_cert(cert_data)
+        issuer_org = extract_issuer(decoded_cert)
+        if issuer_org is None:
+            certificates_list.append({"kind": "certificatemanager#certificate#issuer", "name": results["certificates"][i]["name"], "issuer_org": "NONE"})
+        else:
+            certificates_list.append({"kind": "certificatemanager#certificate#issuer", "name": results["certificates"][i]["name"], "issuer_org": issuer_org})
+    return json.dumps(certificates_list, separators=(',', ':'))
 
 
-# main api invocation end point:
-
+# Main API endpoint
 @app.route('/', methods=['GET'])
-
 def upload_json():
-    pool.apply
     logger.info("Starting CaC Compliance Evaluation")
-    # loop the asset exports
-    for i in content_type:
-        asset_export(asset_parent, output_config, i)
-        data = download_json_from_gcs(
-            bucket_name, export_output_name)
-        asset_export_data.extend(data)
-    # first chunk of final Opa input
-    asset_data = asset_export_data
-    upload_json_to_gcs(bucket_name, asset_data, "data/asset.json")
-    # scc scans
+    overall_start_time = time.time()
 
+    # Step 1: Export assets in parallel
+    asset_data = parallelized_asset_export(asset_parent, content_type_list)
+
+    # Prepare batch upload tasks
+    upload_tasks = [
+        (asset_data, "data/asset.json")
+    ]
+
+    # Step 2: SCC export
     scc_data = json.loads(scc_export(scc_logs, scc_parent))
-    upload_json_to_gcs(bucket_name, scc_data, "data/scc.json")
-    for objf in scc_data:
-        asset_data.append(objf)
-    # second chunk of final Opa input
+    upload_tasks.append((scc_data, "data/scc.json"))
 
-    logger_data = json.loads(logger_export(logger_export_adminapis_admin,
-                                           logger_export_adminapis_cloudaudit, logger_resource_name))
-    upload_json_to_gcs(bucket_name, logger_data, "data/logger.json")
-    for objfg in logger_data:
-        asset_data.append(objfg)
+    # Step 3: Logger export
+    logger_data = json.loads(logger_export(logger_export_adminapis_admin, logger_export_adminapis_cloudaudit, logger_resource_name))
+    upload_tasks.append((logger_data, "data/logger.json"))
 
-    gcs_folder_data = json.loads(gcs_export(
-        gcs_folders, gcs_folder_objects, bucket_name))
-    upload_json_to_gcs(bucket_name, gcs_folder_data, "data/gcs.json")
-    for obj in gcs_folder_data:
-        asset_data.append(obj)
-    final_list = asset_data
-    data = opa_input_data(final_list)
-    upload_json_to_gcs(bucket_name, data, "data/compiled.json")
-    logger.info("Evaluating Compiled Information")
-    response = requests.post(
-        "http://localhost:8181/v1/data/main/guardrail", json=data)
+    # Step 4: GCS folder export
+    gcs_folder_data = json.loads(gcs_export(gcs_folders, gcs_folder_objects, bucket_name))
+    upload_tasks.append((gcs_folder_data, "data/gcs.json"))
+
+    # Step 5: Essential Contacts export
+    essentialcontacts_data = json.loads(essentialcontacts_export(asset_parent))
+    upload_tasks.append((essentialcontacts_data, "data/essentialcontacts.json"))
+
+    # Step 6: Workspace Users export
+    ws_user_data = json.loads(workspace_users_export(ws_domain))
+    upload_tasks.append((ws_user_data, "data/ws_users.json"))
+
+    # Step 7: Access Context Manager (ACM) access levels export
+    acm_data = json.loads(acm_export(asset_parent))
+    upload_tasks.append((acm_data, "data/acm.json"))
+
+    # Step 8: Org Admin Group members export
+    org_admin_group_member_data = json.loads(org_admin_group_member_export(customer_id_parent, ws_domain))
+    upload_tasks.append((org_admin_group_member_data, "data/org_admin_group_members.json"))
+
+    # Step 9: Org Admin Group members export
+    org_resource_tag_value_data = json.loads(org_resource_tag_value_export(asset_parent, tag_key_list))
+    upload_tasks.append((org_resource_tag_value_data, "data/org_resource_tag_value_export.json"))
+
+    # Step 10: Org Admin Group members export
+    certmanager_data = json.loads(certmanager_export(certmanager_resource_id))
+    upload_tasks.append((certmanager_data, "data/certmanager_export.json"))
+
+    # Step 11: Compile final data
+    final_list = asset_data + scc_data + logger_data + gcs_folder_data + essentialcontacts_data + ws_user_data + acm_data + org_admin_group_member_data + org_resource_tag_value_data + certmanager_data
+    compiled_data = {"input": {"data": final_list}}
+    upload_tasks.append((compiled_data, "data/compiled.json"))
+
+    # Perform batch upload
+    batch_upload_json_to_gcs(bucket_name, upload_tasks)
+    overall_end_time = time.time()
+    duration_td = timedelta(seconds=overall_end_time - overall_start_time)
+    logger.info(f"Time taken to execute operation: {duration_td}")
+
+    # Evaluate compiled data
+    response = requests.post("http://localhost:8181/v1/data/main/guardrail", json=compiled_data)
     if response.ok:
-        response_data = response.json()
-        filtered_json_objects = response_data['result']
+        filtered_json_objects = response.json().get('result', [])
         filtered_json_objects = JSONObjectSchema(
             many=True).dump(filtered_json_objects)
         beautified_filtered_json_objects = json.dumps(
             filtered_json_objects, indent=1, separators=(',', ': '))
         beautified_filtered_json_objects = json.loads(
             beautified_filtered_json_objects)
-        upload_json_to_gcs(
-            bucket_name, beautified_filtered_json_objects, f_name)
+        upload_json_to_gcs(bucket_name, beautified_filtered_json_objects, f_name)
         logger.info("CaC Evaluation Complete")
     else:
-        print(response.status_code)
+        logger.error(f"OPA Evaluation failed: {response.status_code}")
+
+    # overall_end_time = time.time()
+    # duration_td = timedelta(seconds=overall_end_time - overall_start_time)
+    # logger.info(f"Time taken to execute operation: {duration_td}")
     return jsonify(message="CaC Evaluation Complete")
 
 
-# close the process pool
-
-
+#----------------------------------------
+# MAIN FUNCTION
+#----------------------------------------
 if __name__ == '__main__':
-
     serve(app, host='0.0.0.0', port=port)
-
