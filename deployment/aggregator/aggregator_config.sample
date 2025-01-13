@@ -1,0 +1,11 @@
+SERVICE_ACCOUNTS=("cac-solution-37505682288-sa@customer-org-test.iam.gserviceaccount.com")
+CLOUD_RUN_SERVICE_AGENTS=("service-952296305655@serverless-robot-prod.iam.gserviceaccount.com")
+CLOUD_STORAGE_SERVICE_AGENTS=("project-952296305655@storage-transfer-service.iam.gserviceaccount.com")
+
+
+BUCKET_NAME="cac-solution-production-data-hub"
+CONTAINER_REPO="cac-opa-python"
+SOURCE_REPO="cac_policies"
+BUILD_PROJECT="cr-cac-build-test"
+DATA_PROJECT="production-org-test"
+LOCATION="northamerica-northeast1"
