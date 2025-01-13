@@ -285,6 +285,13 @@ def gcs_export(gcs_folders, gcs_folder_objects, bucket_name):
 
 # Essential Contacts export
 def essentialcontacts_export(asset_parent):
+    """Export Essential Contacts data
+    Args:
+        asset_parent: formatted string of resource id format ("organizations/{org_id}")
+
+    Returns:
+        resource data of Essential Contacts (JSON format)
+    """
     logger.info("Compiling Essential Contacts Data")
     ec_client = build("essentialcontacts", "v1", credentials=credentials)
     request = ec_client.organizations().contacts().list(parent=asset_parent)
@@ -300,6 +307,14 @@ def essentialcontacts_export(asset_parent):
 
 # Workspace export
 def workspace_users_export(ws_domain):
+    """Export Workspace user data
+    Args:
+        ws_domain: Workspace Domain
+
+    Returns:
+        resource data of users list belonging to ws_domain (JSON format)
+        if no ws_domain is provided, return empty list
+    """
     logger.info("Compiling Workspace User Data")
     # if ws_domain is NOT set
     if ws_domain == '':
@@ -312,6 +327,13 @@ def workspace_users_export(ws_domain):
 
 # Access Context Manager policy access levels export
 def acm_export(asset_parent):
+    """Export Access Context Manager data
+    Args:
+        asset_parent: formatted string of resource id format ("organizations/{org_id}")
+
+    Returns:
+        custom resource data from Access Context Manager API (JSON format)
+    """
     logger.info("Compiling Access Context Manager Data")
     acm_client = build("accesscontextmanager", "v1", credentials=credentials)
     request = acm_client.accessPolicies().list(parent=asset_parent)
@@ -331,7 +353,19 @@ def acm_export(asset_parent):
 
 # Org Admin Group member export
 def org_admin_group_member_export(customer_id_parent, ws_domain):
+    """Export organization admin group member data
+    Args:
+        customer_id_parent: formatted string of resource id format ("customers/{customer_id}")
+        ws_domain: Workspace Domain
+
+    Returns:
+        custom resource data of members of the organization admin group (JSON format)
+        if no ws_domain is provided, return empty list
+    """
     logger.info("Compiling Org Admin Group Member Data")
+    # if ws_domain is NOT set
+    if ws_domain == '':
+        return []
     cloudidentity_client = build("cloudidentity", "v1", credentials=credentials)
     # find group name
     request = cloudidentity_client.groups().list(parent=customer_id_parent)
@@ -354,6 +388,14 @@ def org_admin_group_member_export(customer_id_parent, ws_domain):
 
 # Resource Tag Value export
 def org_resource_tag_value_export(customer_id_parent, tag_key_list):
+    """Export data of tagged resources
+    Args:
+        customer_id_parent: formatted string of resource id format ("customers/{customer_id}")
+        tag_key_list: list of tags to search for
+
+    Returns:
+        custom resource data of tagged resources with tag keys matching provided tag_key_list (JSON format)
+    """
     logger.info("Compiling Org Resource Direct Tagging Data")
     asset_client = asset_v1.AssetServiceClient(credentials=credentials)
     tagged_resources_list = []
@@ -373,6 +415,13 @@ def org_resource_tag_value_export(customer_id_parent, tag_key_list):
 
 # Certificate Manager Cert Issuer export - applies only to Direct Tags
 def certmanager_export(certmanager_resource_id):
+    """Export certificate data from Certificate Manager API
+    Args:
+        certmanager_resource_id: formatted string of resource id format ("projects/{project_id}/locations/global)"
+
+    Returns:
+        custom resource data from certificate manager (JSON format)
+    """
     service = build('certificatemanager', 'v1')
     request = service.projects().locations().certificates().list(parent=certmanager_resource_id)
     results = request.execute()
