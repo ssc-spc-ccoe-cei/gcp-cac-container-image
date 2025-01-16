@@ -1,0 +1,5 @@
+###GCP Organization Name
+ORG_NAME="example.ca" 
+###GC Cloud Usage Profile number
+GC_PROFILE="1"
+REGION="northamerica-northeast1"
