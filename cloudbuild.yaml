@@ -1,0 +1,135 @@
+steps:
+  # Build the Container Image
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      [ 'build','-t','${_REGION}-docker.pkg.dev/${_PROJECT_ID}/cac-python/${_IMAGE_NAME}:${_SHORT_SHA}', '-f', 'Dockerfile', '.']
+  # Push the container image to Artifact Registry
+    dir: "application"
+  - name: "gcr.io/cloud-builders/docker"
+    args:
+      [
+        "push",
+        '${_REGION}-docker.pkg.dev/${_PROJECT_ID}/cac-python/${_IMAGE_NAME}:${_SHORT_SHA}'
+      ]
+  # Deploy the service to CloudRun
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    entrypoint: /bin/bash
+    args:
+      - -c
+      - |
+        cat <<EOF > cloudrun.yaml
+        apiVersion: serving.knative.dev/v1
+        kind: Service
+        metadata:
+          name: cac-collector-dev
+          labels:
+            cloud.googleapis.com/location: northamerica-northeast1
+          annotations:
+        spec:
+          template:
+            metadata:
+              labels:
+                run.googleapis.com/startupProbeType: Default
+              annotations:
+                autoscaling.knative.dev/maxScale: '1'
+                run.googleapis.com/execution-environment: gen2
+                run.googleapis.com/startup-cpu-boost: 'true'
+                run.googleapis.com/container-dependencies: '{"cac-python-1":["git-sync-1"],"opa-1":["git-sync-1"]}'
+            spec:
+              containerConcurrency: 80
+              timeoutSeconds: 300
+              serviceAccountName: ${SERVICE_ACCOUNT}
+              containers:
+              - name: cac-python-1
+                image: ${_REGION}-docker.pkg.dev/${_PROJECT_ID}/cac-python/${_IMAGE_NAME}:${_SHORT_SHA}'
+                ports:
+                - name: http1
+                  containerPort: 8443
+                env:
+                - name: LOG_LEVEL
+                  value: INFO
+                - name: GCP_PROJECT
+                  value: ${PROJECT_ID}
+                - name: ORG_NAME
+                  value: ${ORG_NAME}
+                - name: ORG_ID
+                  value: ${ORG_ID}
+                - name: GCS_BUCKET
+                  value: ${GCS_BUCKET}
+                resources:
+                  limits:
+                    cpu: 4000m
+                    memory: 4Gi
+              - name: git-sync-1
+                image: ${GIT_SYNC_IMAGE}
+                env:
+                - name: GITSYNC_HTTP_BIND
+                  value: '9080'
+                - name: GITSYNC_REPO
+                  value: ${POLICY_REPO}
+                - name: GITSYNC_ROOT
+                  value: '/policies'
+                resources:
+                  limits:
+                    cpu: 1000m
+                    memory: 2Gi
+                startupProbe:
+                  initialDelaySeconds: 30
+                  timeoutSeconds: 10
+                  periodSeconds: 10
+                  failureThreshold: 5
+                  httpGet:
+                    path: /
+                    port: 9080
+              - name: opa-1
+                image: ${OPA_IMAGE}
+                env:
+                - name: GR11_04_ORG_ID
+                  value: ${ORG_ID}
+                - name: GR01_03_DOMAIN
+                  value: ${DOMAIN}
+                - name: GR02_01_DOMAIN
+                  value: ${DOMAIN}
+                - name: GR01_06_PRIVILEGED_USERS
+                  value: ${PRIVILEGED_USERS_LIST}
+                - name: GR01_06_REGULAR_USERS
+                  value: ${REGULAR_USERS_LIST}
+                - name: GR02_01_PRIVILEGED_USERS
+                  value: ${PRIVILEGED_USERS_LIST}
+                - name: GR02_01_REGULAR_USERS
+                  value: ${REGULAR_USERS_LIST}
+                - name: GR02_08_ALLOWED_DOMAINS
+                  value: ${ALLOWED_DOMAINS}
+                - name: GR02_08_DENY_DOMAINS
+                  value: ${DENY_DOMAINS}
+                - name: GR02_09_HAS_GUEST_USERS
+                  value: ${HAS_GUEST_USERS}
+                - name: GR02_10_HAS_GUEST_USERS
+                  value: ${HAS_GUEST_USERS}
+                - name: GR03_01_CUSTOMER_IDS
+                  value: ${CUSTOMER_IDS}
+                - name: GR03_01_ALLOWED_CIDRS
+                  value: ${ALLOWED_CIDRS}
+                - name: GR05_01_SECURITY_CATEGORY_KEY
+                  value: ${SECURITY_CATEGORY_KEY}
+                - name: GR07_03_ALLOWED_CA_ISSUERS
+                  value: ${CA_ISSUERS}
+                resources:
+                  limits:
+                    cpu: 1000m
+                    memory: 2Gi
+                volumeMounts:
+                - name: policies
+                  mountPath: /policies
+              volumes:
+              - name: policies
+                emptyDir:
+                  medium: Memory
+                  sizeLimit: 512Mi
+          traffic:
+          - percent: 100
+            latestRevision: true
+        EOF
+        gcloud --impersonate-service-account="${SERVICE_ACCOUNT}" \
+        run services replace cloudrun.yaml
+
