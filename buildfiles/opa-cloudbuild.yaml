@@ -1,0 +1,11 @@
+steps:
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['pull', 'openpolicyagent/opa:${_OPA_VERSION}']
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['tag', 'openpolicyagent/opa:${_OPA_VERSION}','${_REGION}-docker.pkg.dev/${_PROJECT_ID}/opa/opa:${_OPA_VERSION}']
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['push', '${_REGION}-docker.pkg.dev/${_PROJECT_ID}/opa/opa:${_OPA_VERSION}']
+options:
+  automapSubstitutions: true
+substitutions:
+  _OPA_VERSION: 0.70.0
