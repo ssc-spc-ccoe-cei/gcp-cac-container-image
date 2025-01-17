@@ -12,13 +12,11 @@ DATE=$(date)
 PROJECT_ID="$(gcloud config get-value project)"
 PROJECT_NUMBER=$(gcloud projects describe $PROJECT_ID --format="value(projectNumber)" 2>&1)
 
-PROJECT_ROLES=("iam.workloadIdentityUser" "run.developer" "iam.serviceAccountUser" "storage.admin" "cloudscheduler.admin" "run.invoker" "run.serviceAgent")
+PROJECT_ROLES=("iam.workloadIdentityUser" "run.developer" "iam.serviceAccountUser" "storage.admin" "storage.buckets.create" "cloudscheduler.admin" "run.invoker" "run.serviceAgent")
 ORG_ROLES=("securitycenter.adminViewer" "logging.viewer" "cloudasset.viewer" "essentialcontacts.viewer" "certificatemanager.viewer" "accesscontextmanager.policyReader" "accesscontextmanager.gcpAccessReader")
-
 
 SERVICE_APIS=("run" "storagetransfer" "cloudasset")
 PROJECT_APIS=("run" "cloudscheduler" "storage" "cloudasset" "storagetransfer" "securitycenter" "containerregistry" "admin" "cloudidentity" "cloudresourcemanager" "orgpolicy" "accesscontextmanager" "certificatemanager" "essentialcontacts" )
-
 
 
 function input_language {

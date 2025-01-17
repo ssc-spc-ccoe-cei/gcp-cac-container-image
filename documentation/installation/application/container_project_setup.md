@@ -88,7 +88,7 @@ Included in this repository is a script that can be leveraged to setup all of th
 
 ## Preparing the GCP Environment
 
-Run the `installation.sh` script found in the `deployment/application` directory. The script will prompt for the GCP organization name and use it to provision the Service Account and enable all of the required APIs
+Run the `install.sh` script found in the `deployment/application` directory. The script will prompt for the GCP organization name and use it to provision the Service Account and enable all of the required APIs
 Once the script has completed, continue on to the sections below to complete the initial setup for Binary Authorization, as well as configuring the GitHub repository integration with CloudBuild
 
 ### Setting up Binary Authorization
@@ -108,8 +108,12 @@ Once the script has completed, continue on to the sections below to complete the
 2) Create an Attestor in the GCP Console:
 
 <https://console.cloud.google.com/security/binary-authorization/attestors/create>
-        
+
+PKIX key, which you can import the KMS key.  Note the "name" in the `gcloud kms keys list --location northamerica-northeast1 --keyring $KEY_RING` command.  You'll need to append `/cryptoKeyVersions/1` at the end of it to  meet the required format.
+
 ## Connect to GitHub
+
+Note: you'll need the Secret Manager Admin role (*roles/secretmanager.admin*) as you need *secretmanager.secrets.create* and *secretmanager.secrets.setIamPolicy* permissions
 
         BUILD_PROJECT=
         gcloud config set project $BUILD_PROJECT
