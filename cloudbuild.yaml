@@ -113,7 +113,7 @@ steps:
                 - name: GR05_01_SECURITY_CATEGORY_KEY
                   value: "${_SECURITY_CATEGORY_KEY}"
                 - name: GR07_03_ALLOWED_CA_ISSUERS
-                  value: "${__CA_ISSUERS}"
+                  value: "${_CA_ISSUERS}"
                 resources:
                   limits:
                     cpu: 1000m
@@ -134,3 +134,17 @@ steps:
         gcloud --impersonate-service-account="${_SERVICE_ACCOUNT}" \
         run services replace cloudrun.yaml
 
+# options:
+#   automapSubstitutions: true
+# substitutions:
+#   _ORG_ID: ""
+#   _DOMAIN: ""
+#   _PRIVILEGED_USERS_LIST: ""
+#   _REGULAR_USERS_LIST: ""
+#   _ALLOWED_DOMAINS: ""
+#   _DENY_DOMAINS: ""
+#   _HAS_GUEST_USERS: ""
+#   _CUSTOMER_IDS: ""
+#   _ALLOWED_CIDRS: ""
+#   _SECURITY_CATEGORY_KEY: "SECURITY_CATEGORY"
+#   _CA_ISSUERS: ""
