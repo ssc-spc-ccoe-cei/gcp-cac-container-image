@@ -1,0 +1,52 @@
+
+### GCP Organization Information
+
+# Service Account Short Name
+
+SERVICE_ACCOUNT="cac-solution-37505682288-sa"
+
+# Organization Name
+ORG_NAME="lab-rat.ca"
+# GC Cloud Usage Profile number
+GC_PROFILE="1"
+PROJECT_ID="cacv2-devproj"
+# Tag Key used to identify security classification of GCP resources
+# example: a GCS bucket can be identified as containing Protected "A" data by tagging it
+# SECURITY_CATEGORY: Protected A
+
+SECURITY_CATEGORY_KEY="SECURITY_CATEGORY"
+
+# List of Privileged Users and their regular account names
+# Format: 'user:admin1@org.ca,user:admin2@org.ca,user:admin3@org.ca'
+PRIVILEGED_USERS_LIST="user:jenn@lab-rat.ca"
+REGULAR_USERS_LIST="  "
+
+# List of Domains that are allowed/denied to access the GCP environment
+# Format: 'ssc.gc.ca,domain2.ca'
+ALLOWED_DOMAINS="lab-rat.ca,pwc.com "
+DENY_DOMAINS="  "
+HAS_GUEST_USERS="False"
+
+# List of CIDR Blocks allowed to access the GCP environment
+# Format: '10.0.0.0/8,192.168.1.0/24'
+ALLOWED_CIDRS="  "
+
+# List of GCP Org and/or Workspace Customer IDs
+# run `gcloud organization list` to find yours
+# i.e. CUSTOMER_IDS='C03xxxx4x,Abc123,XYZ890'
+CUSTOMER_IDS="  "
+
+# List of Acceptable Certifcate Authorities
+# Format: "Let's Encrypt,Verisign"
+
+CA_ISSUERS="Let's Encrypt,Verisign "
+
+#############From SSC
+
+SSC_BUCKET_NAME="gs://dev-compliance-hub-705810609657"
+POLICY_REPO="https://source.developers.google.com/p/gcp-cac-solution-build/r/cac_policies"
+REGION="northamerica-northeast1"
+CAC_IMAGE="northamerica-northeast1-docker.pkg.dev/cacv2-devproj/cac-python/cac-python:432552"
+GIT_SYNC_IMAGE="northamerica-northeast1-docker.pkg.dev/cacv2-devproj/gitsync/git-sync:v4.2.3"
+OPA_IMAGE="northamerica-northeast1-docker.pkg.dev/cacv2-devproj/opa/opa:0.70.0"
+BRANCH="feat/enhancement"

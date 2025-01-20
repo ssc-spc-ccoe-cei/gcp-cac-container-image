@@ -182,8 +182,8 @@ To import a new image version to the Artifact registry, clone this repository an
         gcloud config set project $BUILD_PROJECT
         PROJECT_ID="$(gcloud config get-value project)"
         
-        gcloud builds submit --config buildfiles/opa-cloudbuild.yaml \
+        gcloud builds submit --config buildfiles/opa-cloudbuild.yaml --region northamerica-northeast1 \
         --substitutions=_OPA_VERSION="0.70.0",_REGION="northamerica-northeast1",_PROJECT_ID=$PROJECT_ID  
 
-        gcloud builds submit --config buildfiles/gitsync-cloudbuild.yaml \
+        gcloud builds submit --config buildfiles/gitsync-cloudbuild.yaml --region northamerica-northeast1 \
         --substitutions=_GIT_SYNC_VERSION="v4.2.3",_REGION="northamerica-northeast1",_PROJECT_ID=$PROJECT_ID 

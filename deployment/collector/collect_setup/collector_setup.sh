@@ -247,15 +247,20 @@ spec:
         image: "${GIT_SYNC_IMAGE}"
         env:
         - name: GITSYNC_HTTP_BIND
-          value: '9080'
+          value: ':9080'
         - name: GITSYNC_REPO
           value: "${POLICY_REPO}"
         - name: GITSYNC_ROOT
-          value: '/policies'
+          value: '/mnt/policies/git'
+        - name: GITSYNC_REF
+          value: "${BRANCH}"
         resources:
           limits:
             cpu: 1000m
             memory: 2Gi
+        volumeMounts:
+        - name: policies
+          mountPath: /mnt/policies
         startupProbe:
           initialDelaySeconds: 30
           timeoutSeconds: 10
@@ -266,6 +271,12 @@ spec:
             port: 9080
       - name: opa-1
         image: "${OPA_IMAGE}"
+        args:
+        - --server
+        - --addr
+        - :8181
+        - -d
+        - /mnt/policies/git/policies
         env:
         - name: GR11_04_ORG_ID
           value: "${ORG_ID}"
@@ -303,7 +314,7 @@ spec:
             memory: 2Gi
         volumeMounts:
         - name: policies
-          mountPath: /policies
+          mountPath: /mnt/policies
       volumes:
       - name: policies
         emptyDir:
@@ -351,8 +362,8 @@ echo "$LANG_DEPLOYMENT_PROMPT" >>$LOG_FILE
 . ./collector_config
 config_init
 
-#service_account
-#storage_bucket
+service_account
+storage_bucket
 cloudrun_service
 
 echo "
