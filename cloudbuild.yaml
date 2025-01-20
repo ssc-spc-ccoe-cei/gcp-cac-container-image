@@ -38,10 +38,10 @@ steps:
             spec:
               containerConcurrency: 80
               timeoutSeconds: 300
-              serviceAccountName: "${_SERVICE_ACCOUNT}
+              serviceAccountName: ${SERVICE_ACCOUNT}
               containers:
               - name: cac-python-1
-                image: "${_CAC_IMAGE}
+                image: ${CAC_IMAGE}
                 ports:
                 - name: http1
                   containerPort: 8443
@@ -49,30 +49,35 @@ steps:
                 - name: LOG_LEVEL
                   value: "INFO"
                 - name: GCP_PROJECT
-                  value: "${_PROJECT_ID}"
+                  value: "${PROJECT_ID}"
                 - name: ORG_NAME
-                  value: "${_ORG_NAME}"
+                  value: "${ORG_NAME}"
                 - name: ORG_ID
-                  value: "${_ORG_ID}"
+                  value: "${ORG_ID}"
                 - name: GCS_BUCKET
-                  value: "${_GCS_BUCKET}"
+                  value: "${GCS_BUCKET}"
                 resources:
                   limits:
                     cpu: 4000m
                     memory: 4Gi
               - name: git-sync-1
-                image: "${_GIT_SYNC_IMAGE}"
+                image: "${GIT_SYNC_IMAGE}"
                 env:
                 - name: GITSYNC_HTTP_BIND
-                  value: '9080'
+                  value: ':9080'
                 - name: GITSYNC_REPO
-                  value: "${_POLICY_REPO}"
+                  value: "${POLICY_REPO}"
                 - name: GITSYNC_ROOT
-                  value: '/policies'
+                  value: '/mnt/policies/git'
+                - name: GITSYNC_REF
+                  value: "${BRANCH}"
                 resources:
                   limits:
                     cpu: 1000m
                     memory: 2Gi
+                volumeMounts:
+                - name: policies
+                  mountPath: /mnt/policies
                 startupProbe:
                   initialDelaySeconds: 30
                   timeoutSeconds: 10
@@ -82,45 +87,51 @@ steps:
                     path: /
                     port: 9080
               - name: opa-1
-                image: "${_OPA_IMAGE}"
+                image: "${OPA_IMAGE}"
+                args:
+                - --server
+                - --addr
+                - :8181
+                - -d
+                - /mnt/policies/git/policies
                 env:
                 - name: GR11_04_ORG_ID
-                  value: "${_ORG_ID}"
+                  value: "${ORG_ID}"
                 - name: GR01_03_DOMAIN
-                  value: "${_DOMAIN}"
+                  value: "${DOMAIN}"
                 - name: GR02_01_DOMAIN
-                  value: "${_DOMAIN}"
+                  value: "${DOMAIN}"
                 - name: GR01_06_PRIVILEGED_USERS
-                  value: "${_PRIVILEGED_USERS_LIST}"
+                  value: "${PRIVILEGED_USERS_LIST}"
                 - name: GR01_06_REGULAR_USERS
-                  value: "${_REGULAR_USERS_LIST}"
+                  value: "${REGULAR_USERS_LIST}"
                 - name: GR02_01_PRIVILEGED_USERS
-                  value: "${_PRIVILEGED_USERS_LIST}"
+                  value: "${PRIVILEGED_USERS_LIST}"
                 - name: GR02_01_REGULAR_USERS
-                  value: "${_REGULAR_USERS_LIST}"
+                  value: "${REGULAR_USERS_LIST}"
                 - name: GR02_08_ALLOWED_DOMAINS
-                  value: "${_ALLOWED_DOMAINS}"
+                  value: "${ALLOWED_DOMAINS}"
                 - name: GR02_08_DENY_DOMAINS
-                  value: "${_DENY_DOMAINS}"
+                  value: "${DENY_DOMAINS}"
                 - name: GR02_09_HAS_GUEST_USERS
-                  value: "${_HAS_GUEST_USERS}"
+                  value: "${HAS_GUEST_USERS}"
                 - name: GR02_10_HAS_GUEST_USERS
-                  value: "${_HAS_GUEST_USERS}"
+                  value: "${HAS_GUEST_USERS}"
                 - name: GR03_01_CUSTOMER_IDS
-                  value: "${_CUSTOMER_IDS}"
+                  value: "${CUSTOMER_IDS}"
                 - name: GR03_01_ALLOWED_CIDRS
-                  value: "${_ALLOWED_CIDRS}"
+                  value: "${ALLOWED_CIDRS}"
                 - name: GR05_01_SECURITY_CATEGORY_KEY
-                  value: "${_SECURITY_CATEGORY_KEY}"
+                  value: "${SECURITY_CATEGORY_KEY}"
                 - name: GR07_03_ALLOWED_CA_ISSUERS
-                  value: "${_CA_ISSUERS}"
+                  value: "${CA_ISSUERS}"
                 resources:
                   limits:
                     cpu: 1000m
                     memory: 2Gi
                 volumeMounts:
                 - name: policies
-                  mountPath: /policies
+                  mountPath: /mnt/policies
               volumes:
               - name: policies
                 emptyDir:
@@ -129,22 +140,25 @@ steps:
           traffic:
           - percent: 100
             latestRevision: true
-        EOF
 
         gcloud --impersonate-service-account="${_SERVICE_ACCOUNT}" \
         run services replace cloudrun.yaml
-
-# options:
-#   automapSubstitutions: true
-# substitutions:
-#   _ORG_ID: ""
-#   _DOMAIN: ""
-#   _PRIVILEGED_USERS_LIST: ""
-#   _REGULAR_USERS_LIST: ""
-#   _ALLOWED_DOMAINS: ""
-#   _DENY_DOMAINS: ""
-#   _HAS_GUEST_USERS: ""
-#   _CUSTOMER_IDS: ""
-#   _ALLOWED_CIDRS: ""
-#   _SECURITY_CATEGORY_KEY: "SECURITY_CATEGORY"
-#   _CA_ISSUERS: ""
+substitutions:
+  _SERVICE_ACCOUNT:
+  _ORG_NAME:
+  _GC_PROFILE:
+  _SECURITY_CATEGORY_KEY:
+  _PRIVILEGED_USERS_LIST:
+  _REGULAR_USERS_LIST:
+  _ALLOWED_DOMAINS:
+  _DENY_DOMAINS:
+  _HAS_GUEST_USERS:
+  _ALLOWED_CIDRS:
+  _CUSTOMER_IDS:
+  _CA_ISSUERS:
+  _POLICY_REPO:
+  _REGION:
+  _GIT_SYNC_IMAGE:
+  _OPA_IMAGE:
+options:
+  dynamicSubstitutions: true
