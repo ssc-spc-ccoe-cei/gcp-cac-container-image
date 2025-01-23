@@ -79,7 +79,7 @@ These results will be aggregated daily into a BigQuery Data set that can be visu
         PROJECT_ID="$(gcloud config get-value project)"
         SERVICE_ACCOUNT="$SERVICE_ACCOUNT_NAME@$PROJECT_ID.iam.gserviceaccount.com"
         REGION=northamerica-northeast1
-        BUCKET_NAME=cac-solution-data-hub
+        BUCKET_NAME=cac-solution-v2-data-hub
         gsutil --impersonate-service-account="$SERVICE_ACCOUNT"  mb -l $REGION gs://$BUCKET_NAME
 
 2. Verify Bucket Creation
@@ -103,36 +103,58 @@ These results will be aggregated daily into a BigQuery Data set that can be visu
         gcloud projects get-iam-policy ${PROJECT_NUMBER} --flatten="bindings[].members[]" --filter="bindings.role="roles/bigquerydatatransfer.serviceAgent""
 
 3. Create the BigQuery Data Set:
-
-        gcloud config set project <AGGREGATE_PROJECT_ID>
-        PROJECT_ID="$(gcloud config get-value project)"
-        SERVICE_ACCOUNT="$SERVICE_ACCOUNT_NAME@$PROJECT_ID.iam.gserviceaccount.com"
-        DATASET_ID="cac_solution_results"
-        gcloud config set auth/impersonate_service_account $SERVICE_ACCOUNT
-        curl --request POST \
-        "https://bigquery.googleapis.com/bigquery/v2/projects/$PROJECT_ID/datasets" \
-        -H "Authorization: Bearer $(gcloud auth print-access-token)" \
-        -H 'Accept: application/json' \
-        -H 'Content-Type: application/json' \
-        --data '{"friendlyName":"'"$DATASET_ID"'","datasetReference":{"datasetId":"'"$DATASET_ID"'"},"description":"CaC Solution Results Dataset"}' \
-        --compressed
-        gcloud config unset auth/impersonate_service_account
+```
+gcloud config set project <AGGREGATE_PROJECT_ID>
+PROJECT_ID="$(gcloud config get-value project)"
+SERVICE_ACCOUNT="$SERVICE_ACCOUNT_NAME@$PROJECT_ID.iam.gserviceaccount.com"
+DATASET_ID="cac_solution_results"
+gcloud config set auth/impersonate_service_account $SERVICE_ACCOUNT
+curl --request POST \
+  "https://bigquery.googleapis.com/bigquery/v2/projects/$PROJECT_ID/datasets" \
+  -H "Authorization: Bearer $(gcloud auth print-access-token)" \
+  -H 'Accept: application/json' \
+  -H 'Content-Type: application/json' \
+  --data '{
+    "friendlyName":"'"$DATASET_ID"'",
+    "datasetReference":{
+      "datasetId":"'"$DATASET_ID"'"
+    },
+    "description":"CaC Solution Results Dataset",
+    "location":"northamerica-northeast1"
+  }' \
+  --compressed
+gcloud config unset auth/impersonate_service_account
+```
 
 4. Create the BigQuery Table and Schema:
+```
+gcloud config set project <AGGREGATE_PROJECT_ID>
+PROJECT_ID="$(gcloud config get-value project)"
+SERVICE_ACCOUNT="$SERVICE_ACCOUNT_NAME@$PROJECT_ID.iam.gserviceaccount.com"
+DATASET_ID="cac_solution_results"
+TABLE_ID="raw_compliance_results_test"
+gcloud config set auth/impersonate_service_account $SERVICE_ACCOUNT
+curl --request POST \
+  "https://bigquery.googleapis.com/bigquery/v2/projects/$PROJECT_ID/datasets/$DATASET_ID/tables" \
+  -H "Authorization: Bearer $(gcloud auth print-access-token)" \
+  --header 'Accept: application/json' \
+  --header 'Content-Type: application/json' \
+  --data '{
+    "friendlyName":"",
+    "description":"Raw Data from Compliance Testing",
+    "schema":{
+      "fields":[{"name":"organization","type":"string"},{"name":"status","type":"string"},{"name":"profile_level","type":"INT64"},{"name":"description","type":"string"},{"name":"asset_name","type":"string"},{"name":"msg","type":"string"},{"name":"organization_id","type":"INT64"},{"name":"guardrail","type":"INT64"},{"name":"check_type","type":"string"},{"name":"timestamp","type":"DATE"}]
+    },
+    "tableReference":{
+      "datasetId":"'"$DATASET_ID"'",
+      "tableId":"'"$TABLE_ID"'",
+      "projectId":"'"$PROJECT_ID"'"
+    }
+  }' \
+  --compressed
+gcloud config unset auth/impersonate_service_account
+```
 
-        gcloud config set project <AGGREGATE_PROJECT_ID>
-        PROJECT_ID="$(gcloud config get-value project)"
-        SERVICE_ACCOUNT="$SERVICE_ACCOUNT_NAME@$PROJECT_ID.iam.gserviceaccount.com"
-        DATASET_ID="cac_solution_results"
-        gcloud config set auth/impersonate_service_account $SERVICE_ACCOUNT
-        curl --request POST \
-        "https://bigquery.googleapis.com/bigquery/v2/projects/$PROJECT_ID/datasets/$PROJECT_ID/tables" \
-        -H "Authorization: Bearer $(gcloud auth print-access-token)" \
-        --header 'Accept: application/json' \
-        --header 'Content-Type: application/json' \
-        --data '{"friendlyName":"","description":"Raw Data from Compliance Testing","schema":{"fields":[{"name":"organization","type":"string"},{"name":"status","type":"string"},{"name":"profile_level","type":"INT64"},{"name":"description","type":"string"},{"name":"asset_name","type":"string"},{"name":"msg","type":"string"},{"name":"organization_id","type":"INT64"},{"name":"guardrail","type":"INT64"},{"name":"check_type","type":"string"},{"name":"timestamp","type":"DATE"}]},"tableReference":{"datasetId":"'"$DATASET_ID"'","tableId":"raw_compliance_results","projectId":"'"$PROJECT_ID"'"}}' \
-        --compressed
-        gcloud config unset auth/impersonate_service_account
 5. Create the scheduled transfer job:
 
         gcloud config set project <AGGREGATE_PROJECT_ID>
