@@ -143,7 +143,7 @@ curl --request POST \
     "friendlyName":"",
     "description":"Raw Data from Compliance Testing",
     "schema":{
-      "fields":[{"name":"organization","type":"string"},{"name":"status","type":"string"},{"name":"profile_level","type":"INT64"},{"name":"description","type":"string"},{"name":"asset_name","type":"string"},{"name":"msg","type":"string"},{"name":"organization_id","type":"INT64"},{"name":"guardrail","type":"INT64"},{"name":"check_type","type":"string"},{"name":"timestamp","type":"DATE"}]
+      "fields":[{"name":"tenant_domain","type":"string"},{"name":"organization","type":"string"},{"name":"status","type":"string"},{"name":"profile_level","type":"INT64"},{"name":"description","type":"string"},{"name":"asset_name","type":"string"},{"name":"msg","type":"string"},{"name":"organization_id","type":"INT64"},{"name":"guardrail","type":"INT64"},{"name":"validation","type":"string"},{"name":"check_type","type":"string"},{"name":"timestamp","type":"DATE"}]
     },
     "tableReference":{
       "datasetId":"'"$DATASET_ID"'",
@@ -167,8 +167,9 @@ gcloud config unset auth/impersonate_service_account
         --target_dataset=$DATASET_ID \
         --display_name="${BQ_JOB_NAME}"\
         --params='{"data_path_template": "'"gs://${BUCKET_NAME}/results-*.json"'","file_format": "JSON", "destination_table_name_template":"raw_compliance_results"}'
-          Verify the BigQuery DataSet and Transfer service setup in the GCP Console
   
+Verify the BigQuery DataSet and Transfer service setup in the GCP Console
+
 6. Create a Scheduled Query. Sample SQL files are included in the the `sql` directory to create a number of queries related to the compliance status of organizations. The [scheduled_query](../setup_scripts/aggregator/sql/scheduled_query.sql) SQL will provided query results based on the oragnization, compliance status and its profile level.
 
     Use the BigQquery UI to run the query and create a Scheduled Query to run on an appropriate schedule.

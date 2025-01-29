@@ -14,6 +14,7 @@ Looker Studio can use individual user credentials or service account credentials
 |BigQuery Data Viewer   | Allows the service account read the dataset metadata, data and tables     | Data Set Level    | 
 |BigQuery Job User      | Provides permissions to run jobs, including queries, within the project.  | Project Level     |
 
+**ATTENTION** - need to provide a `SERVICE_ACCOUNT_NAME`!!
 ```shell
 gcloud config set project <AGGREGATE_PROJECT_ID>
 PROJECT_ID="$(gcloud config get-value project)"
@@ -26,7 +27,7 @@ SERVICE_ACCOUNT="$SERVICE_ACCOUNT_NAME@$PROJECT_ID.iam.gserviceaccount.com"
 SA_ROLES=("bigquery.jobUser" "bigquery.dataViewer")
 for role in ${SA_ROLES[@]}; do 
     gcloud projects add-iam-policy-binding ${PROJECT_ID} \
-    -member=serviceAccount:${SERVICE_ACCOUNT}\
+    --member=serviceAccount:${SERVICE_ACCOUNT}\
     --role=roles/${role}
 done
 ```
@@ -41,7 +42,7 @@ SERVICE_ACCOUNT="$SERVICE_ACCOUNT_NAME@$PROJECT_ID.iam.gserviceaccount.com"
 ORG_ID="$(gcloud organizations list --filter=${ORG_NAME} --format="value(ID)" 2>&1)"
 
 gcloud iam service-accounts add-iam-policy-binding ${SERVICE_ACCOUNT} \
---member="service-${ORG_ID}@gcp-sa-datastudio.iam.gserviceaccount.com" \
+--member=serviceAccount:"service-${ORG_ID}@gcp-sa-datastudio.iam.gserviceaccount.com" \
 --role="roles/iam.serviceAccountTokenCreator"
 ```
 
