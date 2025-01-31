@@ -162,4 +162,5 @@ substitutions:
   _OPA_IMAGE:
 options:
   dynamicSubstitutions: true
+  substitutionOption: 'ALLOW_LOOSE'
   logging: CLOUD_LOGGING_ONLY
