@@ -122,11 +122,11 @@ Create CloudBuild Triggers for the Python Application, OPA, and GitSync containe
     gcloud config set project $BUILD_PROJECT
     OPA_REPO_NAME=
     GIT_REPO_NAME=
-    APP_REPO_NME=
+    APP_REPO_NAME=
     SERVICE_ACCOUNT=
     gcloud builds triggers create pythonapp-image-build \
     --repo=${APP_REPO_NAME}\
-    --branch-pattern=main 
+    --branch-pattern=main \
     --build-config=buildfiles/pythonapp-cloudbuild.yaml \
     --service-account=${SERVICE_ACCOUNT}
 
@@ -135,7 +135,7 @@ Create CloudBuild Triggers for the Python Application, OPA, and GitSync containe
     gcloud builds triggers create opa-image-build \
     --repo=$OPA_REPO_NAME \
     --branch-pattern="main" \
-    --build-config=opa-cloudbuild.yaml \
+    --build-config=buildfiles/opa-cloudbuild.yaml \
     --service-account=${SERVICE_ACCOUNT}
 
     #Create a CloudBuild Trigger for the GitSync container image:
@@ -143,7 +143,7 @@ Create CloudBuild Triggers for the Python Application, OPA, and GitSync containe
     gcloud builds triggers create gitsync-image-build \
     --repo=${GIT_REPO_NAME} \
     --branch-pattern="main" \ 
-    --build-config=gitsync-cloudbuild.yaml \
+    --build-config=buildfiles/gitsync-cloudbuild.yaml \
     --service-account=${SERVICE_ACCOUNT}
 
 ## Building and Testing the CaC Solution application
