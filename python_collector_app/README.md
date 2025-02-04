@@ -182,7 +182,7 @@ To build a new version of the python application:
     gcloud config set project $BUILD_PROJECT
     PROJECT_ID="$(gcloud config get-value project)"
 
-    gcloud builds triggers run pythonapp-image\
+    gcloud builds triggers run pythonapp-image \
     --region northamerica-northeast1 \
     --substitutions=_SERVICE_ACCOUNT="${SERVICE_ACCOUNT}",\
     _ORG_NAME="${ORG_NAME}",\
