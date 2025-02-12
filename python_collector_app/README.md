@@ -9,7 +9,7 @@ This repository contains the application artifacts for the Compliance-as-Code(Ca
     - [Adding the code to Cloud Source Repositories](#adding-the-code-to-cloud-source-repositories)
     - [Setup Cloud Build Triggers](#setup-cloud-build-triggers)
   - [Building and Testing the CaC Solution application](#building-and-testing-the-cac-solution-application)
-    - [Importing new OPA and GitSync images](#importing-new-opa-and-gitsync-images)
+    - [Importing new OPA images](#importing-new-opa-images)
   - [Gitflow Tagging](#gitflow-tagging)
 <!-- TOC end -->
 
@@ -64,14 +64,16 @@ Once the script has completed, continue on to the sections below to complete the
 
 1) Create a KMS Keyring and Key:
 
-       BUILD_PROJECT=
-       gcloud config set project $BUILD_PROJECT
-       PROJECT_ID="$(gcloud config get-value project)"
-       KEY_RING="cac-signing-key-ring"
-       KEY="cac-signing-key"
-       gcloud kms keyrings create $KEY_RING --location northamerica-northeast1
-       gcloud kms keys create $KEY --location northamerica-northeast1 --keyring $KEY_RING --purpose asymmetric-signing --default-algorithm rsa-sign-pss-2048-sha256
-       gcloud kms keys list --location northamerica-northeast1 --keyring $KEY_RING
+```bash
+BUILD_PROJECT=
+gcloud config set project $BUILD_PROJECT
+PROJECT_ID="$(gcloud config get-value project)"
+KEY_RING="cac-signing-key-ring"
+KEY="cac-signing-key"
+gcloud kms keyrings create $KEY_RING --location northamerica-northeast1
+gcloud kms keys create $KEY --location northamerica-northeast1 --keyring $KEY_RING --purpose asymmetric-signing --default-algorithm rsa-sign-pss-2048-sha256
+gcloud kms keys list --location northamerica-northeast1 --keyring $KEY_RING
+```
 
 2) Create an Attestor in the GCP Console:
 
@@ -85,70 +87,152 @@ In order to add the artifacts in this repository to Cloud Source, you will need 
 
 1) Add the container image files to the repository:
 
-       #Clone the Repo
-       gcloud source repos clone cac_container_image  
+```bash
+ #Clone the Repo
+ gcloud source repos clone cac_container_image  
 
-       #Copy files to repo folder
+ #Copy files to repo folder
 
-       cp -r ssc-slz-compliance-python/* cac_container_image/
-       cd cac_container_image
+ cp -r ssc-slz-compliance-python/* cac_container_image/
+ cd cac_container_image
 
-       #configure git credentials for this repository
-       cac_container_image git:(main) ✗ git config user.email <gcp email>
-       cac_container_image git:(main) ✗ git config user.name <name>
+ #configure git credentials for this repository
+ cac_container_image git:(main) ✗ git config user.email <gcp email>
+ cac_container_image git:(main) ✗ git config user.name <name>
 
-       #commit the files
-       cac_container_image git:(main) ✗ git commit -m "Initial Commit"
+ #commit the files
+ cac_container_image git:(main) ✗ git commit -m "Initial Commit"
 
 > Hint:  If you're using Windows, enter the following command:
 
-    gcloud init && git config credential.helper gcloud.cmd
+gcloud init && git config credential.helper gcloud.cmd
 
 > Hint: If you're using Linux or macOS, enter the following command:
 
-    gcloud init && git config credential.helper gcloud.sh
+gcloud init && git config credential.helper gcloud.sh
+```
 
 ### Setup Cloud Build Triggers
 
-In the [buildfiles](../../../buildfiles/) directory there are 3 cloudbuild configuration files:
+In the [buildfiles](../../../buildfiles/) directory there are 2 cloudbuild configuration files:
 
 - [pythonapp-cloudbuild.yaml](../../../buildfiles/pythonapp-cloudbuild.yaml): Builds the CaC data collector application, and deploys it for testing to CloudRun.
-- [gitsync-cloudbuild.yaml](../../../buildfiles/gitsync-cloudbuild.yaml): Pulls the public image from the Kubernetes Image registry and imports it to Artifact Registry.
 - [opa-cloudbuild.yaml](../../../buildfiles/opa-cloudbuild.yaml): Pulls the public image from Dockerhub and imports it to artifact registry.
 
-Create CloudBuild Triggers for the Python Application, OPA, and GitSync container images:
+Create Cloud Build **PUSH** Triggers for the Python Application container images:
 
-    BUILD_PROJECT=
-    gcloud config set project $BUILD_PROJECT
-    OPA_REPO_NAME=
-    GIT_REPO_NAME=
-    APP_REPO_NAME=
-    SERVICE_ACCOUNT=
-    gcloud builds triggers create pythonapp-image-build \
-    --repo=${APP_REPO_NAME}\
-    --branch-pattern=main \
-    --build-config=buildfiles/pythonapp-cloudbuild.yaml \
-    --service-account=${SERVICE_ACCOUNT}
+```bash
 
-    #Create a CloudBuild Trigger for the OPA container image:
+source buildfiles/collector_config
+BUILD_PROJECT=
+APP_REPO_NAME=
+gcloud config set project $BUILD_PROJECT
 
-    gcloud builds triggers create opa-image-build \
-    --repo=$OPA_REPO_NAME \
-    --branch-pattern="main" \
-    --build-config=buildfiles/opa-cloudbuild.yaml \
-    --service-account=${SERVICE_ACCOUNT}
+gcloud builds triggers create cloud-source-repositories \
+--name="python-app-image-build" \
+--repo=${APP_REPO_NAME}\
+--branch-pattern=main \
+--build-config=buildfiles/pythonapp-cloudbuild.yaml \
+--service-account=${SERVICE_ACCOUNT} \
+--region "${REGION}" \
+--substitutions=^+^\
+_IMAGE_TAG="${IMAGE_TAG}"+\
+_POLICY_REPO="${POLICY_REPO}"+\
+_BRANCH="${BRANCH}"+\
+_REGION="${REGION}"+\
+_POLICY_VERSION="${POLICY_VERSION}"+\
+_OPA_IMAGE="${OPA_IMAGE}"+\
+_GCS_BUCKET="${GCS_BUCKET}"+\
+_PROJECT_ID="${PROJECT_ID}"+\
+_SERVICE_ACCOUNT="${SERVICE_ACCOUNT}"+\
+_ORG_NAME="${ORG_NAME}"+\
+_ORG_ID="${ORG_ID}"+\
+_GC_PROFILE="${GC_PROFILE}"+\
+_DOMAIN="${DOMAIN}"+\
+_SECURITY_CATEGORY_KEY="${SECURITY_CATEGORY_KEY}"+\
+_PRIVILEGED_USERS_LIST="${_PRIVILEGED_USERS_LIST}"+\
+_REGULAR_USERS_LIST="${_REGULAR_USERS_LIST}"+\
+_ALLOWED_DOMAINS="${ALLOWED_DOMAINS}"+\
+_DENY_DOMAINS="${DENY_DOMAINS}"+\
+_HAS_GUEST_USERS="${HAS_GUEST_USERS}"+\
+_ALLOWED_CIDRS="${ALLOWED_CIDRS}"+\
+_CUSTOMER_IDS="${CUSTOMER_IDS}"+\
+_CA_ISSUERS="${CA_ISSUERS}"+\
+_APP_PORT="${APP_PORT}"
 
-    #Create a CloudBuild Trigger for the GitSync container image:
+```
 
-    gcloud builds triggers create gitsync-image-build \
-    --repo=${GIT_REPO_NAME} \
-    --branch-pattern="main" \ 
-    --build-config=buildfiles/gitsync-cloudbuild.yaml \
-    --service-account=${SERVICE_ACCOUNT}
+**NOTE:** SERVICE_ACCOUNT is of the format `project/PROJECT_ID/serviceAccounts/FULL_SA_EMAIL` (i.e. projects/myproject123/serviceAccounts/my_sa_user@myproject123.iam.gserviceaccounts.com) and POLICY_REPO is the Cloud Source Repositories repo name (**just** the name)
+
+Create Cloud Build **MANUAL** Trigger for the Python Application:
+
+```bash
+
+source buildfiles/collector_config
+
+gcloud builds triggers create manual \
+--name="python-app-image-build" \
+--repo-type="CLOUD_SOURCE_REPOSITORIES" \
+--repo=${POLICY_REPO} \
+--branch="${BRANCH}" \
+--build-config=buildfiles/pythonapp-cloudbuild.yaml \
+--service-account=${SERVICE_ACCOUNT} \
+--region "${REGION}" \
+--substitutions=^+^\
+_IMAGE_TAG="${IMAGE_TAG}"+\
+_POLICY_REPO="${POLICY_REPO}"+\
+_BRANCH="${BRANCH}"+\
+_REGION="${REGION}"+\
+_POLICY_VERSION="${POLICY_VERSION}"+\
+_OPA_IMAGE="${OPA_IMAGE}"+\
+_GCS_BUCKET="${GCS_BUCKET}"+\
+_PROJECT_ID="${PROJECT_ID}"+\
+_SERVICE_ACCOUNT="${SERVICE_ACCOUNT}"+\
+_ORG_NAME="${ORG_NAME}"+\
+_ORG_ID="${ORG_ID}"+\
+_GC_PROFILE="${GC_PROFILE}"+\
+_DOMAIN="${DOMAIN}"+\
+_SECURITY_CATEGORY_KEY="${SECURITY_CATEGORY_KEY}"+\
+_PRIVILEGED_USERS_LIST="${_PRIVILEGED_USERS_LIST}"+\
+_REGULAR_USERS_LIST="${_REGULAR_USERS_LIST}"+\
+_ALLOWED_DOMAINS="${ALLOWED_DOMAINS}"+\
+_DENY_DOMAINS="${DENY_DOMAINS}"+\
+_HAS_GUEST_USERS="${HAS_GUEST_USERS}"+\
+_ALLOWED_CIDRS="${ALLOWED_CIDRS}"+\
+_CUSTOMER_IDS="${CUSTOMER_IDS}"+\
+_CA_ISSUERS="${CA_ISSUERS}"+\
+_APP_PORT="${APP_PORT}"
+```
+
+Create a Cloud Build **MANUAL** trigger for the OPA Container image
+
+```bash
+BUILD_PROJECT=
+APP_REPO_NAME=
+OPA_VERSION=
+REGION=
+SERVICE_ACCOUNT=
+
+gcloud config set project $BUILD_PROJECT
+
+gcloud builds triggers create manual \
+--name="opa-image-build" \
+--repo-type="CLOUD_SOURCE_REPOSITORIES" \
+--repo=${APP_REPO_NAME}\
+--branch-pattern=main \
+--build-config=buildfiles/opa-cloudbuild.yaml \
+--service-account=${SERVICE_ACCOUNT} \
+--region="${REGION}" \
+--substitutions=_OPA_VERSION="$OPA_VERSION",\
+_REGION="${REGION}"\
+_PROJECT_ID="${BUILD_PROJECT}"
+```
+
+**NOTE:** APP_FULL_REPO_NAME is of the format: `https://source.developers.google.com/PROJECT_ID/REPO_NAME`
 
 ## Building and Testing the CaC Solution application
 
-The deploy stage of  `pythonapp` build requires a number of variable substitutions that are used to test both the application and the policies:
+The deploy stage of  `python-app` build requires a number of variable substitutions that are used to test both the application and the policies:
 
 | Name                      | Description                                                                   | Example                   |
 |---------------------------|-------------------------------------------------------------------------------|---------------------------|
@@ -166,107 +250,120 @@ The deploy stage of  `pythonapp` build requires a number of variable substitutio
 | `_CA_ISSUERS`             |List of Acceptable Certifcate Authorities                                      |`"Let's Encrypt,Verisign"`|
 | `_POLICY_REPO`            |URL of Source Control repository hosting the CaC Policies                      |"https://source.developers.google.com/p/gcp-cac-solution-build/r/cac_policies"`|
 | `_REGION`                 |GCP Region to deploy to                                                        |`northamerica-northeast1`|
-| `_GIT_SYNC_IMAGE`         |URL of GitSync Container image                                                 |`"northamerica-northeast1-docker.pkg.dev/cacv2-devproj/gitsync/git-sync:v4.2.3"`|
 | `_OPA_IMAGE`              |URL of OPA Container Image                                                     |`"northamerica-northeast1-docker.pkg.dev/cacv2-devproj/opa/opa:0.70.0"`|
-|_ARTIFACT_REPOSITORY_NAME  | The name of the Google Artifact registry used to store the container image    | `cac_repo`                |
-|_ATTESTOR_NAME             | The name of the Binary Authorization Attestor to use when signing the image   | `cac-attestor`            |
-|_IMAGE_NAME                | The name to use as the final container image name                             | `cac-opa-python`          |
-|_KEY_NAME                  | The name of the CloudKMS key used to sign the container image                 | `signing-key`             |
-|_KEY_VERSION               | The version number of the CloudKMS key                                        | `1`                       |
-|_KEYRING_NAME              | The name of the CloudKMS keyring that houses the signing key                  | `signing-keyring`         |
-|_REGION                    | the Artifact registry location                                                |  `northamerica-northeast1`|
+|`_ARTIFACT_REPOSITORY_NAME`  | The name of the Google Artifact registry used to store the container image    | `cac_repo`                |
+|`_ATTESTOR_NAME`             | The name of the Binary Authorization Attestor to use when signing the image   | `cac-attestor`            |
+|`_IMAGE_NAME`               | The name to use as the final container image name                             | `cac-opa-python`          |
+|`_KEY_NAME`                | The name of the CloudKMS key used to sign the container image                 | `signing-key`             |
+|`_KEY_VERSION`               | The version number of the CloudKMS key                                        | `1`                       |
+|`_KEYRING_NAME`             | The name of the CloudKMS keyring that houses the signing key                  | `signing-keyring`         |
+|`_REGION`                    | the Artifact registry location                                                |  `northamerica-northeast1`|
 
 To build a new version of the python application:
-    source buildfiles/collector_config
 
-    gcloud config set project $BUILD_PROJECT
-    PROJECT_ID="$(gcloud config get-value project)"
+```bash
+source buildfiles/collector_config
 
-    gcloud builds triggers run pythonapp-image \
-    --region northamerica-northeast1 \
-    --substitutions=_SERVICE_ACCOUNT="${SERVICE_ACCOUNT}",\
-    _ORG_NAME="${ORG_NAME}",\
-    _GC_PROFILE="${GC_PROFILE}",\
-    _SECURITY_CATEGORY_KEY="${SECURITY_CATEGORY_KEY}",\
-    _PRIVILEGED_USERS_LIST="${_PRIVILEGED_USERS_LIST}",\
-    _REGULAR_USERS_LIST="${_REGULAR_USERS_LIST}",\
-    _ALLOWED_DOMAINS="${ALLOWED_DOMAINS}",\
-    _DENY_DOMAINS="${DENY_DOMAINS}",\
-    _HAS_GUEST_USERS="${HAS_GUEST_USERS}",\
-    _ALLOWED_CIDRS="${ALLOWED_CIDRS}",\
-    _CUSTOMER_IDS="${CUSTOMER_IDS}",\
-    _CA_ISSUERS="${CA_ISSUERS}",\
-    _POLICY_REPO="${POLICY_REPO}",\
-    _REGION="${REGION}",\
-    _GIT_SYNC_IMAGE="${GIT_SYNC_IMAGE}",\
-    _OPA_IMAGE="${OPA_IMAGE}",\
-    _PROJECT_ID="${PROJECT_ID}
+gcloud config set project $BUILD_PROJECT
+PROJECT_ID="$(gcloud config get-value project)"
 
-### Importing new OPA and GitSync images
+gcloud builds triggers run python-app-image-build \
+--region "${REGION}" \
+--substitutions=^+^\
+_IMAGE_TAG="${IMAGE_TAG}"+\
+_POLICY_REPO="${POLICY_REPO}"+\
+_BRANCH="${BRANCH}"+\
+_REGION="${REGION}"+\
+_POLICY_VERSION="${POLICY_VERSION}"+\
+_OPA_IMAGE="${OPA_IMAGE}"+\
+_GCS_BUCKET="${GCS_BUCKET}"+\
+_PROJECT_ID="${PROJECT_ID}"+\
+_SERVICE_ACCOUNT="${SERVICE_ACCOUNT}"+\
+_ORG_NAME="${ORG_NAME}"+\
+_ORG_ID="${ORG_ID}"+\
+_GC_PROFILE="${GC_PROFILE}"+\
+_DOMAIN="${DOMAIN}"+\
+_SECURITY_CATEGORY_KEY="${SECURITY_CATEGORY_KEY}"+\
+_PRIVILEGED_USERS_LIST="${_PRIVILEGED_USERS_LIST}"+\
+_REGULAR_USERS_LIST="${_REGULAR_USERS_LIST}"+\
+_ALLOWED_DOMAINS="${ALLOWED_DOMAINS}"+\
+_DENY_DOMAINS="${DENY_DOMAINS}"+\
+_HAS_GUEST_USERS="${HAS_GUEST_USERS}"+\
+_ALLOWED_CIDRS="${ALLOWED_CIDRS}"+\
+_CUSTOMER_IDS="${CUSTOMER_IDS}"+\
+_CA_ISSUERS="${CA_ISSUERS}"+\
+_APP_PORT="${APP_PORT}"+\
+_POLICY_PROJECT="${POLICY}"
 
-The `gitsync` and `opa` builds take the image tag (version) as an environment variable. This allows SSC to control what versions of the application components are available for consumption.
+```
+
+### Importing new OPA images
+
+The `opa` builds take the image tag (version) as an environment variable. This allows SSC to control what versions of the application components are available for consumption.
 They can be run from the GCP CloudBuild Console, or using the gcloud command.
 
 To import a new version of the OPA image:
 
-    BUILD_PROJECT=
-    gcloud config set project $BUILD_PROJECT
-    PROJECT_ID="$(gcloud config get-value project)"
+```bash
+BUILD_PROJECT=
+gcloud config set project $BUILD_PROJECT
+PROJECT_ID="$(gcloud config get-value project)"
 
-    gcloud builds triggers run opa-image-build \
-    --region northamerica-northeast1 \
-    --substitutions=_OPA_VERSION="0.70.0",\
-    _REGION="northamerica-northeast1",\
-    _PROJECT_ID=$PROJECT_ID  
+gcloud builds triggers run opa-image-build \
+--region northamerica-northeast1 \
+--substitutions=_OPA_VERSION="0.70.0",\
+_REGION="northamerica-northeast1",\
+_PROJECT_ID="${PROJECT_ID}" 
+```
 
-To import a new version of the GitSync image:
-
-    BUILD_PROJECT=
-    gcloud config set project $BUILD_PROJECT
-    PROJECT_ID="$(gcloud config get-value project)"
-
-    gcloud builds triggers run  gitsync-image-build \
-    --region northamerica-northeast1 \
-    --substitutions=_GIT_SYNC_VERSION="v4.2.3",\
-    _REGION="northamerica-northeast1",\
-    _PROJECT_ID=$PROJECT_ID
-
-Because the application is deployed with a side-car architecture, if you want to update any component (whether it's OPA or Git Sync), you will first need to submit a Cloud Build job to update the side-car image versions first before submitting the application's Cloud Build pipeline to release the updated (overall) app.
-
-Updating and Testing GitSync:
-
-    BUILD_PROJECT=
-    gcloud config set project $BUILD_PROJECT
-    PROJECT_ID="$(gcloud config get-value project)"
-
-    gcloud builds triggers run  gitsync-image-build \
-    --region northamerica-northeast1 \
-    --substitutions=_GIT_SYNC_VERSION="v4.2.3",\
-    _REGION="northamerica-northeast1",\
-    _PROJECT_ID=$PROJECT_ID
-
-    gcloud builds triggers run pythonapp-image\
-    --region northamerica-northeast1 \
-    --substitutions=
+Because the application is deployed with a side-car architecture, if you want to update any component  you will first need to submit a Cloud Build job to update the side-car image versions first before submitting the application's Cloud Build pipeline to release the updated (overall) app.
 
 Updating and Testing OPA:
 
-    BUILD_PROJECT=
-    gcloud config set project $BUILD_PROJECT
-    PROJECT_ID="$(gcloud config get-value project)"
+```bash
+BUILD_PROJECT=
+gcloud config set project $BUILD_PROJECT
+PROJECT_ID="$(gcloud config get-value project)"
 
-    gcloud builds triggers run opa-image-build \
-    --region northamerica-northeast1 \
-    --substitutions=_OPA_VERSION="0.70.0",\
-    _REGION="northamerica-northeast1",\
-    _PROJECT_ID=$PROJECT_ID  
+gcloud builds triggers run opa-image-build \
+--region northamerica-northeast1 \
+--substitutions=_OPA_VERSION="0.70.0",\
+_REGION="northamerica-northeast1",\
+_PROJECT_ID=$PROJECT_ID  
 
-    gcloud builds triggers run pythonapp-image\
-    --region northamerica-northeast1 \
-    --substitutions=
+gcloud builds triggers run pythonapp-image\
+--region northamerica-northeast1 \
+--substitutions=gcloud builds triggers run python-app-image-build --region ${REGION} \
+--substitutions=^+^_IMAGE_TAG="${IMAGE_TAG}"+\
+_POLICY_REPO="${POLICY_REPO}"+\
+_BRANCH="${BRANCH}"+\
+_REGION="${REGION}"+\
+_POLICY_VERSION="${POLICY_VERSION}"+\
+_OPA_IMAGE="${OPA_IMAGE}"+\
+_GCS_BUCKET="${GCS_BUCKET}"+\
+_PROJECT_ID="${PROJECT_ID}"+\
+_SERVICE_ACCOUNT="${SERVICE_ACCOUNT}"+\
+_ORG_NAME="${ORG_NAME}"+\
+_ORG_ID="${ORG_ID}"+\
+_GC_PROFILE="${GC_PROFILE}"+\
+_DOMAIN="${DOMAIN}"+\
+_SECURITY_CATEGORY_KEY="${SECURITY_CATEGORY_KEY}"+\
+_PRIVILEGED_USERS_LIST="${_PRIVILEGED_USERS_LIST}"+\
+_REGULAR_USERS_LIST="${_REGULAR_USERS_LIST}"+\
+_ALLOWED_DOMAINS="${ALLOWED_DOMAINS}"+\
+_DENY_DOMAINS="${DENY_DOMAINS}"+\
+_HAS_GUEST_USERS="${HAS_GUEST_USERS}"+\
+_ALLOWED_CIDRS="${ALLOWED_CIDRS}"+\
+_CUSTOMER_IDS="${CUSTOMER_IDS}"+\
+_CA_ISSUERS="${CA_ISSUERS}"+\
+_APP_PORT="${APP_PORT}"+\
+_POLICY_PROJECT="${POLICY}"
+```
 
 ## Gitflow Tagging
 
 Generally performed as part of a release, tagging is a simple way of marking the code at that particular release point:
 
-    git tag -a v1.0 -m "This is GCP CaC v1.0"
+```bash
+git tag -a v1.0 -m "This is GCP CaC v1.0"
+```

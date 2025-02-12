@@ -58,7 +58,7 @@ function config_init {
   ## Gathers required information for installation
   printf "$LANG_SETUP_PROMPT"
   REQUIRED_VARIABLES=("PROJECT_ID" "SERVICE_ACCOUNT" "ORG_NAME" "GC_PROFILE" "SECURITY_CATEGORY_KEY" "PRIVILEGED_USERS_LIST" "REGULAR_USERS_LIST" "ALLOWED_DOMAINS" "DENY_DOMAINS" "HAS_GUEST_USERS" "ALLOWED_CIDRS" "CUSTOMER_IDS" "CA_ISSUERS" "SSC_BUCKET_NAME" "POLICY_REPO" "CAC_IMAGE" "GIT_SYNC_IMAGE" "OPA_IMAGE" "REGION")
-
+ 
   for setting in "${REQUIRED_VARIABLES[@]}"; do
     if [ -z "${!setting}" ]; then
     echo "ERROR: $setting is not set. Please set the variable in the collector_config file"
@@ -199,130 +199,137 @@ function cloudrun_service {
   # Run the Cloud Run job using the specified image and publishing the logs
   echo $CREATE_CRUN >>$LOG_FILE 2>&1
   cat <<EOF > cloudrun.yaml
-apiVersion: serving.knative.dev/v1
-kind: Service
-metadata:
-  name: cac-solution-dev
-  labels:
-    cloud.googleapis.com/location: northamerica-northeast1
-  annotations:
-spec:
-  template:
-    metadata:
-      labels:
-        run.googleapis.com/startupProbeType: Default
-      annotations:
-        autoscaling.knative.dev/maxScale: '1'
-        run.googleapis.com/execution-environment: gen2
-        run.googleapis.com/startup-cpu-boost: 'true'
-        run.googleapis.com/container-dependencies: '{"cac-python-1":["git-sync-1"],"opa-1":["git-sync-1"]}'
-    spec:
-      containerConcurrency: 80
-      timeoutSeconds: 300
-      serviceAccountName: ${_SERVICE_ACCOUNT}
-      containers:
-      - name: cac-python-1
-        image: ${_CAC_IMAGE}
-        ports:
-        - name: http1
-          containerPort: 8443
-        env:
-        - name: LOG_LEVEL
-          value: "INFO"
-        - name: GCP_PROJECT
-          value: "${_PROJECT_ID}"
-        - name: ORG_NAME
-          value: "${_ORG_NAME}"
-        - name: ORG_ID
-          value: "${_ORG_ID}"
-        - name: GCS_BUCKET
-          value: "${_GCS_BUCKET}"
-        resources:
-          limits:
-            cpu: 4000m
-            memory: 4Gi
-      - name: git-sync-1
-        image: "${_GIT_SYNC_IMAGE}"
-        env:
-        - name: GITSYNC_HTTP_BIND
-          value: ':9080'
-        - name: GITSYNC_REPO
-          value: "${_POLICY_REPO}"
-        - name: GITSYNC_ROOT
-          value: '/mnt/policies/git'
-        - name: GITSYNC_REF
-          value: "${_BRANCH}"
-        resources:
-          limits:
-            cpu: 1000m
-            memory: 2Gi
-        volumeMounts:
-        - name: policies
-          mountPath: /mnt/policies
-        startupProbe:
-          initialDelaySeconds: 30
-          timeoutSeconds: 10
-          periodSeconds: 10
-          failureThreshold: 5
-          httpGet:
-            path: /
-            port: 9080
-      - name: opa-1
-        image: "${_OPA_IMAGE}"
-        args:
-        - --server
-        - --addr
-        - :8181
-        - -d
-        - /mnt/policies/git/policies
-        env:
-        - name: GR11_04_ORG_ID
-          value: "${_ORG_ID}"
-        - name: GR01_03_DOMAIN
-          value: "${_DOMAIN}"
-        - name: GR02_01_DOMAIN
-          value: "${_DOMAIN}"
-        - name: GR01_06_PRIVILEGED_USERS
-          value: "${_PRIVILEGED_USERS_LIST}"
-        - name: GR01_06_REGULAR_USERS
-          value: "${_REGULAR_USERS_LIST}"
-        - name: GR02_01_PRIVILEGED_USERS
-          value: "${_PRIVILEGED_USERS_LIST}"
-        - name: GR02_01_REGULAR_USERS
-          value: "${_REGULAR_USERS_LIST}"
-        - name: GR02_08_ALLOWED_DOMAINS
-          value: "${_ALLOWED_DOMAINS}"
-        - name: GR02_08_DENY_DOMAINS
-          value: "${_DENY_DOMAINS}"
-        - name: GR02_09_HAS_GUEST_USERS
-          value: "${_HAS_GUEST_USERS}"
-        - name: GR02_10_HAS_GUEST_USERS
-          value: "${_HAS_GUEST_USERS}"
-        - name: GR03_01_CUSTOMER_IDS
-          value: "${_CUSTOMER_IDS}"
-        - name: GR03_01_ALLOWED_CIDRS
-          value: "${_ALLOWED_CIDRS}"
-        - name: GR05_01_SECURITY_CATEGORY_KEY
-          value: "${_SECURITY_CATEGORY_KEY}"
-        - name: GR07_03_ALLOWED_CA_ISSUERS
-          value: "${_CA_ISSUERS}"
-        resources:
-          limits:
-            cpu: 1000m
-            memory: 2Gi
-        volumeMounts:
-        - name: policies
-          mountPath: /mnt/policies
-      volumes:
-      - name: policies
-        emptyDir:
-          medium: Memory
-          sizeLimit: 512Mi
-  traffic:
-  - percent: 100
-    latestRevision: true
+        apiVersion: serving.knative.dev/v1
+        kind: Service
+        metadata:
+          name: cac-solution-dev
+          labels:
+            cloud.googleapis.com/location: northamerica-northeast1
+          annotations:
+        spec:
+          template:
+            metadata:
+              labels:
+                run.googleapis.com/startupProbeType: Default
+              annotations:
+                autoscaling.knative.dev/maxScale: '1'
+                run.googleapis.com/execution-environment: gen2
+                run.googleapis.com/startup-cpu-boost: 'true'
+                run.googleapis.com/container-dependencies: '{"cac-python-1":["opa-1"]}'
+            spec:
+              containerConcurrency: 80
+              timeoutSeconds: 300
+              serviceAccountName: ${SERVICE_ACCOUNT}
+              containers:
+              - name: cac-python-1
+                image: ${REGION}-docker.pkg.dev/cacv2-devproj/cac-python/cac-app:${IMAGE_TAG}
+                ports:
+                - name: http1
+                  containerPort: ${APP_PORT}
+                env:
+                - name: APP_PORT
+                  value: "${APP_PORT}"
+                - name: LOG_LEVEL
+                  value: "INFO"
+                - name: GCP_PROJECT
+                  value: "${PROJECT_ID}"
+                - name: ORG_NAME
+                  value: "${ORG_NAME}"
+                - name: ORG_ID
+                  value: "${ORG_ID}"
+                - name: GCS_BUCKET
+                  value: "${GCS_BUCKET}"
+                - name: GC_PROFILE
+                  value: "${GC_PROFILE}"
+                - name: TENANT_DOMAIN
+                  value: "${TENANT_DOMAIN}"
+                - name: POLICY_VERSION
+                  value: "${POLICY_VERSION}"
+                - name: APP_VERSION
+                  value: "${IMAGE_TAG}"              
+                resources:
+                  limits:
+                    cpu: 4000m
+                    memory: 4Gi
+              - name: gcloud-git-sync
+                image: gcr.io/google.com/cloudsdktool/cloud-sdk:509.0.0-alpine
+                command: ['/bin/bash', '-c']
+                args: 
+                  - git config --global credential.helper gcloud.sh;
+                    git clone --quiet ${POLICY_REPO} /mnt/policies; 
+                    cd /mnt/policies; 
+                    git checkout main; 
+                    sleep 300
+                resources:
+                  limits:
+                    cpu: 1000m
+                    memory: 2Gi
+                volumeMounts:
+                - name: policies
+                  mountPath: /mnt/policies
+              - name: opa-1
+                image: "${OPA_IMAGE}"
+                args:
+                  - run
+                  - --server
+                  - --addr
+                  - :8181
+                  - /mnt/policies/
+                env:
+                - name: GR11_04_ORG_ID
+                  value: "${ORG_ID}"
+                - name: GR01_03_DOMAIN
+                  value: "${DOMAIN}"
+                - name: GR02_01_DOMAIN
+                  value: "${DOMAIN}"
+                - name: GR01_06_PRIVILEGED_USERS
+                  value: "${PRIVILEGED_USERS_LIST}"
+                - name: GR01_06_REGULAR_USERS
+                  value: "${REGULAR_USERS_LIST}"
+                - name: GR02_01_PRIVILEGED_USERS
+                  value: "${PRIVILEGED_USERS_LIST}"
+                - name: GR02_01_REGULAR_USERS
+                  value: "${REGULAR_USERS_LIST}"
+                - name: GR02_08_ALLOWED_DOMAINS
+                  value: "${ALLOWED_DOMAINS}"
+                - name: GR02_08_DENY_DOMAINS
+                  value: "${DENY_DOMAINS}"
+                - name: GR02_09_HAS_GUEST_USERS
+                  value: "${HAS_GUEST_USERS}"
+                - name: GR02_10_HAS_GUEST_USERS
+                  value: "${HAS_GUEST_USERS}"
+                - name: GR03_01_CUSTOMER_IDS
+                  value: "${CUSTOMER_IDS}"
+                - name: GR03_01_ALLOWED_CIDRS
+                  value: "${ALLOWED_CIDRS}"
+                - name: GR05_01_SECURITY_CATEGORY_KEY
+                  value: "${SECURITY_CATEGORY_KEY}"
+                - name: GR07_03_ALLOWED_CA_ISSUERS
+                  value: "${CA_ISSUERS}"
+                resources:
+                  limits:
+                    cpu: 1000m
+                    memory: 2Gi
+                volumeMounts:
+                - name: policies
+                  mountPath: /mnt/policies
+                startupProbe:
+                  initialDelaySeconds: 30
+                  timeoutSeconds: 10
+                  periodSeconds: 10
+                  failureThreshold: 5
+                  httpGet:
+                    path: /
+                    port: 8181
+              volumes:
+              - name: policies
+                emptyDir:
+                  medium: Memory
+                  sizeLimit: 512Mi
+          traffic:
+          - percent: 100
+            latestRevision: true
 EOF
- 
   
   # a buffer so google is ready for subsequent call
 
