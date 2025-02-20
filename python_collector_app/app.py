@@ -288,6 +288,13 @@ def gcs_export(gcs_folders, gcs_folder_objects, bucket_name):
 
 # Essential Contacts export
 def essentialcontacts_export(asset_parent):
+    """Get Essential Contacts
+    Args:
+        asset_parent: org ID
+
+    Returns:
+        List of Essential Contacts
+    """
     logger.info("Compiling Essential Contacts Data")
     ec_client = build("essentialcontacts", "v1", credentials=credentials)
     request = ec_client.organizations().contacts().list(parent=asset_parent)
@@ -297,24 +304,51 @@ def essentialcontacts_export(asset_parent):
         for contact in results["contacts"]:
             ec_contacts.append(contact)
     except KeyError:
-        print("WARNING: No Essential Contacts are setup in org")
+        logger.info("WARNING: No Essential Contacts are setup in org")
         pass
     return json.dumps(ec_contacts, separators=(',', ':'))
 
 # Workspace export
 def workspace_users_export(ws_domain):
+    """Get Google Workspace users
+    Args:
+        ws_domain: Workspace domain (if any) 
+
+    Returns:
+        Workspace users' (config) info
+    """
     logger.info("Compiling Workspace User Data")
+    results = []
     # if ws_domain is NOT set
     if ws_domain == '':
+        logger.info("No Workspace domain set -- cannot query Workspace user data")
         return []
     # if ws_domain is set
-    ws_client = build("admin", "directory_v1", credentials=credentials)
-    request = ws_client.users().list(domain=ws_domain)
-    results = request.execute()
+    try:
+        ws_client = build("admin", "directory_v1", credentials=credentials)
+        request = ws_client.users().list(domain=ws_domain)
+        results = request.execute()
+    except Exception as e:
+        if e.resp.status == 403:
+            logger.error("Permission denied. Ensure you have the necessary permissions/scopes")
+        elif e.resp.status >= 500:
+            logger.error("Server error, try again later")
+        else:
+            logger.error(f"An unexpected HTTP error occurred: {e}")
+    except google.auth.exceptions.GoogleAuthError as auth_error:
+        logger.error(f"Authentication error: {auth_error}")
     return json.dumps(results, separators=(',', ':'))
+
 
 # Access Context Manager policy access levels export
 def acm_export(asset_parent):
+    """Get Access Context Manager policies
+    Args:
+        asset_parent: org ID 
+
+    Returns:
+        List of ACM policies
+    """
     logger.info("Compiling Access Context Manager Data")
     acm_client = build("accesscontextmanager", "v1", credentials=credentials)
     request = acm_client.accessPolicies().list(parent=asset_parent)
@@ -334,7 +368,19 @@ def acm_export(asset_parent):
 
 # Org Admin Group member export
 def org_admin_group_member_export(customer_id_parent, ws_domain):
+    """Get Org Admin group member data
+    Args:
+        customer_id_parent: customer ID
+        ws_domain: Workspace domain (if any) 
+
+    Returns:
+        List of Org Admin members
+    """
     logger.info("Compiling Org Admin Group Member Data")
+    # if ws_domain is NOT set
+    if ws_domain == '':
+        logger.info("No Workspace domain set -- cannot query Org Admin Group member data")
+        return []
     cloudidentity_client = build("cloudidentity", "v1", credentials=credentials)
     # find group name
     request = cloudidentity_client.groups().list(parent=customer_id_parent)
@@ -357,6 +403,14 @@ def org_admin_group_member_export(customer_id_parent, ws_domain):
 
 # Resource Tag Value export
 def org_resource_tag_value_export(customer_id_parent, tag_key_list):
+    """Get assets with Tags
+    Args:
+        customer_id_parent: customer ID
+        take_key_list: List of tag keys to filter for
+
+    Returns:
+        List of assets tagged with provided tag keys
+    """
     logger.info("Compiling Org Resource Direct Tagging Data")
     asset_client = asset_v1.AssetServiceClient(credentials=credentials)
     tagged_resources_list = []
@@ -376,6 +430,13 @@ def org_resource_tag_value_export(customer_id_parent, tag_key_list):
 
 # Certificate Manager Cert Issuer export - applies only to Direct Tags
 def certmanager_export(certmanager_resource_id):
+    """Get assets with Tags
+    Args:
+        certmanager_resource_id: project and location of the certificate
+
+    Returns:
+        List of Certificate Manager certificates with issuer info
+    """
     service = build('certificatemanager', 'v1')
     request = service.projects().locations().certificates().list(parent=certmanager_resource_id)
     results = request.execute()
@@ -398,6 +459,7 @@ def upload_json():
     overall_start_time = time.time()
 
     # Step 1: Export assets in parallel
+    logger.info("Step 1 of 11 - Export assets in parallel")
     asset_data = parallelized_asset_export(asset_parent, content_type_list)
 
     # Prepare batch upload tasks
@@ -406,47 +468,58 @@ def upload_json():
     ]
 
     # Step 2: SCC export
+    logger.info("Step 2 of 11 - SSC export")
     scc_data = json.loads(scc_export(scc_logs, scc_parent))
     upload_tasks.append((scc_data, "data/scc.json"))
 
     # Step 3: Logger export
+    logger.info("Step 3 of 11 - Logger export")
     logger_data = json.loads(logger_export(logger_export_adminapis_admin, logger_export_adminapis_cloudaudit, logger_resource_name))
     upload_tasks.append((logger_data, "data/logger.json"))
 
     # Step 4: GCS folder export
+    logger.info("Step 4 of 11 - GCS folder export")
     gcs_folder_data = json.loads(gcs_export(gcs_folders, gcs_folder_objects, bucket_name))
     upload_tasks.append((gcs_folder_data, "data/gcs.json"))
 
     # Step 5: Essential Contacts export
+    logger.info("Step 5 of 11 - Essential Contacts export")
     essentialcontacts_data = json.loads(essentialcontacts_export(asset_parent))
     upload_tasks.append((essentialcontacts_data, "data/essentialcontacts.json"))
 
     # Step 6: Workspace Users export
+    logger.info("Step 6 of 11 - Workspace Users export")
     ws_user_data = json.loads(workspace_users_export(ws_domain))
     upload_tasks.append((ws_user_data, "data/ws_users.json"))
 
     # Step 7: Access Context Manager (ACM) access levels export
+    logger.info("Step 7 of 11 - Access Context Manager export")
     acm_data = json.loads(acm_export(asset_parent))
     upload_tasks.append((acm_data, "data/acm.json"))
 
     # Step 8: Org Admin Group members export
+    logger.info("Step 8 of 11 - Org Admin Group members export")
     org_admin_group_member_data = json.loads(org_admin_group_member_export(customer_id_parent, ws_domain))
     upload_tasks.append((org_admin_group_member_data, "data/org_admin_group_members.json"))
 
-    # Step 9: Org Admin Group members export
+    # Step 9: Asset tags export
+    logger.info("Step 9 of 11 - Asset tags export")
     org_resource_tag_value_data = json.loads(org_resource_tag_value_export(asset_parent, tag_key_list))
     upload_tasks.append((org_resource_tag_value_data, "data/org_resource_tag_value_export.json"))
 
-    # Step 10: Org Admin Group members export
+    # Step 10: Cert Manager export
+    logger.info("Step 10 of 11 - Cert manager export")
     certmanager_data = json.loads(certmanager_export(certmanager_resource_id))
     upload_tasks.append((certmanager_data, "data/certmanager_export.json"))
 
     # Step 11: Compile final data
+    logger.info("Step 11 of 11 - Compiling final data")
     final_list = asset_data + scc_data + logger_data + gcs_folder_data + essentialcontacts_data + ws_user_data + acm_data + org_admin_group_member_data + org_resource_tag_value_data + certmanager_data
     compiled_data = {"input": {"data": final_list}}
     upload_tasks.append((compiled_data, "data/compiled.json"))
 
     # Perform batch upload
+    logger.info("Performing batch upload")
     batch_upload_json_to_gcs(bucket_name, upload_tasks)
     overall_end_time = time.time()
     duration_td = timedelta(seconds=overall_end_time - overall_start_time)
