@@ -36,13 +36,6 @@ function config_init {
     tput sgr0
     exit 1
   fi
-  if [ -z "$GIT_CONTAINER_REPO" ]; then
-    tput setaf 1
-    echo "" 1>&2
-    echo $'ERROR: Please update GITSYNC Container Repo  information in the configuration file '
-    tput sgr0
-    exit 1
-  fi
   if [ -z "$OPA_CONTAINER_REPO" ]; then
     tput setaf 1
     echo "" 1>&2
@@ -98,13 +91,14 @@ function container_registry {
   gcloud config set project $BUILD_PROJECT
 
   for sa in ${CLOUD_RUN_SERVICE_AGENTS[@]}; do
-    for repo in ${APP_CONTAINER_REPO} ${GIT_CONTAINER_REPO} ${OPA_CONTAINER_REPO}; do
-    gcloud artifacts repositories add-iam-policy-binding ${repo} \
-      --location=${LOCATION} \
-      --member=serviceAccount:${sa} \
-      --role=roles/${REGISTRY_ROLE}
+    for repo in ${APP_CONTAINER_REPO} ${OPA_CONTAINER_REPO}; do
+      gcloud artifacts repositories add-iam-policy-binding ${repo} \
+        --location=${LOCATION} \
+        --member=serviceAccount:${sa} \
+        --role=roles/${REGISTRY_ROLE}
+    done
   done
-} 
+}
 function gcs_bucket {
   gcloud config set project $DATA_PROJECT
   for sa in ${CLOUD_STORAGE_SERVICE_AGENTS[@]}; do

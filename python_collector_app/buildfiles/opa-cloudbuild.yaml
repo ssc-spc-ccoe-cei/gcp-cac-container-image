@@ -7,6 +7,7 @@ steps:
   args: ['push', '${_REGION}-docker.pkg.dev/${_PROJECT_ID}/opa/opa:${_OPA_VERSION}']
 options:
   automapSubstitutions: true
+  logging: CLOUD_LOGGING_ONLY
 substitutions:
   _OPA_VERSION: 0.70.0
   _REGION:  northamerica-northeast1

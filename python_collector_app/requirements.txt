@@ -9,4 +9,5 @@ protobuf == 4.25.3
 google-cloud-logging == 3.5.0
 google-cloud-securitycenter == 1.19.0
 google-api-python-client == 2.156.0
-cryptography
+cryptography == 44.0.2
+pytz == 2025.1

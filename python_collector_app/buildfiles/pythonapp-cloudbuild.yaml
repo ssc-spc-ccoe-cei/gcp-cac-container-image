@@ -4,6 +4,7 @@ steps:
     name: "gcr.io/cloud-builders/docker"
     args:
       [ 'build','-t','${_REGION}-docker.pkg.dev/${_PROJECT_ID}/cac-python/cac-app:${_IMAGE_TAG}', '-f', 'Dockerfile', '.']
+    dir: 'python_collector_app'
   # Push the container image to Artifact Registry
   - id: "Push the Image to Artifact Registry"
     name: "gcr.io/cloud-builders/docker"
@@ -42,7 +43,7 @@ steps:
               serviceAccountName: ${_SERVICE_ACCOUNT}
               containers:
               - name: cac-python-1
-                image: ${_REGION}-docker.pkg.dev/cacv2-devproj/cac-python/cac-app:${_IMAGE_TAG}
+                image: ${_REGION}-docker.pkg.dev/${_PROJECT_ID}/cac-python/cac-app:${_IMAGE_TAG}
                 ports:
                 - name: http1
                   containerPort: ${_APP_PORT}
@@ -66,20 +67,24 @@ steps:
                 - name: POLICY_VERSION
                   value: "${_POLICY_VERSION}"
                 - name: APP_VERSION
-                  value: "${_IMAGE_TAG}"              
+                  value: "${_IMAGE_TAG}"
+                - name: CUSTOMER_ID
+                  value: "${_DIRECTORY_CUSTOMER_ID}"
                 resources:
                   limits:
                     cpu: 4000m
                     memory: 4Gi
               - name: gcloud-git-sync
                 image: gcr.io/google.com/cloudsdktool/cloud-sdk:509.0.0-alpine
-                command: ['/bin/bash', '-c']
+                command: ['/bin/bash']
                 args: 
-                  - git config --global credential.helper gcloud.sh; 
-                  git clone --quiet ${_POLICY_REPO} /mnt/policies; 
-                  cd /mnt/policies; 
-                  git checkout ${_BRANCH}; 
-                  sleep 300
+                  - -c
+                  - |
+                    git config --global credential.helper gcloud.sh
+                    git clone --quiet ${_POLICY_REPO} /mnt/policies
+                    cd /mnt/policies
+                    git checkout ${_BRANCH}
+                    sleep 300
                 resources:
                   limits:
                     cpu: 1000m
@@ -94,14 +99,15 @@ steps:
                   - --server
                   - --addr
                   - :8181
+                  - --disable-telemetry
                   - /mnt/policies/
                 env:
                 - name: GR11_04_ORG_ID
                   value: "${_ORG_ID}"
-                - name: GR01_03_DOMAIN
-                  value: "${_DOMAIN}"
-                - name: GR02_01_DOMAIN
-                  value: "${_DOMAIN}"
+                - name: GR01_03_ORG_ADMIN_GROUP_EMAIL
+                  value: "${_ORG_ADMIN_GROUP_EMAIL}"
+                - name: GR02_01_ORG_ADMIN_GROUP_EMAIL
+                  value: "${_ORG_ADMIN_GROUP_EMAIL}"
                 - name: GR01_06_PRIVILEGED_USERS
                   value: "${_PRIVILEGED_USERS_LIST}"
                 - name: GR01_06_REGULAR_USERS
@@ -168,6 +174,8 @@ substitutions:
   _PROJECT_ID: ""
   _ORG_ID: ""
   _DOMAIN: ""
+  _DIRECTORY_CUSTOMER_ID: ""
+  _ORG_ADMIN_GROUP_EMAIL: ""
   _GCS_BUCKET: ""
   _GC_PROFILE: ""
   _SECURITY_CATEGORY_KEY: ""

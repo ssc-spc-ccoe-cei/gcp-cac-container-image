@@ -13,7 +13,7 @@ PROJECT_NUMBER=$(gcloud projects describe $PROJECT_ID --format="value(projectNum
 
 PROJECT_ROLES=("iam.workloadIdentityUser" "run.developer" "iam.serviceAccountUser" "storage.admin" "run.invoker" "run.serviceAgent")
 ORG_ROLES=("securitycenter.adminViewer" "logging.viewer" "cloudasset.viewer" "essentialcontacts.viewer" "certificatemanager.viewer" "accesscontextmanager.policyReader" "accesscontextmanager.gcpAccessReader")
-CLOUD_BUILD_ROLES=("binaryauthorization.attestorsAdmin" "binaryauthorization.attestorsVerifier" "cloudbuild.serviceAgent" "cloudbuild.workerPoolUser" "clouddeploy.admin" "cloudkms.cryptoKeyDecrypter" "cloudkms.cryptoOperator" "run.admin" "run.serviceAgent" "containeranalysis.ServiceAgent" "iam.serviceAccountUser")
+CLOUD_BUILD_ROLES=("binaryauthorization.attestorsAdmin" "binaryauthorization.attestorsVerifier" "cloudbuild.serviceAgent" "cloudbuild.workerPoolUser" "clouddeploy.admin" "cloudkms.cryptoKeyDecrypter" "cloudkms.cryptoOperator" "run.admin" "run.serviceAgent" "containeranalysis.ServiceAgent" "iam.serviceAccountUser" "logging.logWriter" "source.reader" "artifactregistry.reader")
 CLOUD_BUILD_BUCKET_NAME="${PROJECT_ID}_cloudbuild"
 
 SERVICE_APIS=("run" "cloudasset" "cloudbuild")
@@ -24,7 +24,7 @@ ACCOUNT_NUMBER=$(gcloud projects describe ${PROJECT_ID} --format="value(projectN
 # lower casing bucket name
 BUCKET_NAME="dev-compliance-hub-"$(echo ${ACCOUNT_NUMBER} | tr '[:upper:]' '[:lower:]')
 SERVICE_ACCOUNT="cac-dev-${ORG_ID}-sa"
-REGISTRIES=("cac-python" "opa" "gitsync")
+REGISTRIES=("cac-python" "opa")
 
 LOG_LEVEL="INFO"
 DATE=$(date)

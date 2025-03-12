@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#set -o errexit
+set -o errexit
 set -o pipefail
 
 ## declare an array of policies
@@ -57,11 +57,11 @@ function config_init {
 
   ## Gathers required information for installation
   printf "$LANG_SETUP_PROMPT"
-  REQUIRED_VARIABLES=("PROJECT_ID" "SERVICE_ACCOUNT" "ORG_NAME" "GC_PROFILE" "SECURITY_CATEGORY_KEY" "PRIVILEGED_USERS_LIST" "REGULAR_USERS_LIST" "ALLOWED_DOMAINS" "DENY_DOMAINS" "HAS_GUEST_USERS" "ALLOWED_CIDRS" "CUSTOMER_IDS" "CA_ISSUERS" "SSC_BUCKET_NAME" "POLICY_REPO" "CAC_IMAGE" "GIT_SYNC_IMAGE" "OPA_IMAGE" "REGION")
- 
+  REQUIRED_VARIABLES=("PROJECT_ID" "SERVICE_ACCOUNT" "ORG_NAME" "GC_PROFILE" "SECURITY_CATEGORY_KEY" "PRIVILEGED_USERS_LIST" "REGULAR_USERS_LIST" "ALLOWED_DOMAINS" "DENY_DOMAINS" "HAS_GUEST_USERS" "ALLOWED_IPS" "CUSTOMER_IDS" "CA_ISSUERS" "ORG_ADMIN_GROUP_EMAIL" "BREAKGLASS_USER_EMAIL" "SSC_BUCKET_NAME" "POLICY_REPO" "OPA_IMAGE" "REGION")
+
   for setting in "${REQUIRED_VARIABLES[@]}"; do
     if [ -z "${!setting}" ]; then
-    echo "ERROR: $setting is not set. Please set the variable in the collector_config file"
+      echo "ERROR: $setting is not set. Please set the variable in the collector_config file"
     fi
   done
 
@@ -102,7 +102,7 @@ function service_account {
 }
 
 function storage_bucket {
-cat <<EOF > object_lifecycle.json
+  cat <<EOF >object_lifecycle.json
   {
     "lifecycle": {
       "rule": [
@@ -182,15 +182,15 @@ EOF
 
   RUN_HOUR="02:00:00-04:00"
   ORDINAL=$((($RANDOM % 10 + 1)))
-  
+
   # Set up cloud storage transfer job
-  gcloud transfer jobs list --job-statuses=enabled | grep nightly_compliance_transfer > /dev/null 2>&1
+  gcloud transfer jobs list --job-statuses=enabled | grep nightly_compliance_transfer >/dev/null 2>&1
   ret=$?
   if [ $ret -ne 0 ]; then
     gcloud transfer jobs create gs://${BUCKET_NAME}/ ${SSC_BUCKET_NAME} \
       --name "nightly_compliance_transfer_${ORDINAL}" \
       --include-modified-after-relative=1d \
-      --schedule-starts=$(date -d "+1day" -u +"%Y-%m-%dT${RUN_HOUR}") \
+      --schedule-starts=$(date -d "+1day" -u +"%Y-%m-%dT${RUN_HOUR}")
   fi
 }
 
@@ -198,7 +198,7 @@ function cloudrun_service {
 
   # Run the Cloud Run job using the specified image and publishing the logs
   echo $CREATE_CRUN >>$LOG_FILE 2>&1
-  cat <<EOF > cloudrun.yaml
+  cat <<EOF >cloudrun.yaml
         apiVersion: serving.knative.dev/v1
         kind: Service
         metadata:
@@ -222,7 +222,8 @@ function cloudrun_service {
               serviceAccountName: ${SERVICE_ACCOUNT}
               containers:
               - name: cac-python-1
-                image: ${REGION}-docker.pkg.dev/cacv2-devproj/cac-python/cac-app:${IMAGE_TAG}
+                image: ${REGION}-docker.pkg.dev/${PROJECT_ID}/cac-python/cac-app:${IMAGE_TAG}
+                imagePullPolicy: Always
                 ports:
                 - name: http1
                   containerPort: ${APP_PORT}
@@ -246,42 +247,38 @@ function cloudrun_service {
                 - name: POLICY_VERSION
                   value: "${POLICY_VERSION}"
                 - name: APP_VERSION
-                  value: "${IMAGE_TAG}"              
+                  value: "${IMAGE_TAG}"
+                - name: CUSTOMER_ID
+                  value: "${DIRECTORY_CUSTOMER_ID}"
+                - name: ORG_ADMIN_GROUP_EMAIL
+                  value: "${ORG_ADMIN_GROUP_EMAIL}"
+                - name: BREAKGLASS_USER_EMAIL
+                  value: "${BREAKGLASS_USER_EMAIL}"
                 resources:
                   limits:
                     cpu: 4000m
                     memory: 4Gi
-              - name: gcloud-git-sync
-                image: gcr.io/google.com/cloudsdktool/cloud-sdk:509.0.0-alpine
-                command: ['/bin/bash', '-c']
-                args: 
-                  - git config --global credential.helper gcloud.sh;
-                    git clone --quiet ${POLICY_REPO} /mnt/policies; 
-                    cd /mnt/policies; 
-                    git checkout main; 
-                    sleep 300
-                resources:
-                  limits:
-                    cpu: 1000m
-                    memory: 2Gi
-                volumeMounts:
-                - name: policies
-                  mountPath: /mnt/policies
               - name: opa-1
                 image: "${OPA_IMAGE}"
-                args:
-                  - run
-                  - --server
-                  - --addr
-                  - :8181
-                  - /mnt/policies/
+                imagePullPolicy: Always
+                command: ['/bin/bash']
+                args: 
+                  - -c
+                  - |
+                    rm -Rf /mnt/policies/*
+                    git config --global credential.helper gcloud.sh
+                    git clone --quiet ${POLICY_REPO} /mnt/policies
+                    cd /mnt/policies
+                    git checkout ${BRANCH}
+                    ls -l /mnt/policies
+                    /usr/bin/opa run --server --addr :8181 --disable-telemetry /mnt/policies
                 env:
                 - name: GR11_04_ORG_ID
                   value: "${ORG_ID}"
-                - name: GR01_03_DOMAIN
-                  value: "${DOMAIN}"
-                - name: GR02_01_DOMAIN
-                  value: "${DOMAIN}"
+                - name: GR01_03_ORG_ADMIN_GROUP_EMAIL
+                  value: "${ORG_ADMIN_GROUP_EMAIL}"
+                - name: GR02_01_ORG_ADMIN_GROUP_EMAIL
+                  value: "${ORG_ADMIN_GROUP_EMAIL}"
                 - name: GR01_06_PRIVILEGED_USERS
                   value: "${PRIVILEGED_USERS_LIST}"
                 - name: GR01_06_REGULAR_USERS
@@ -306,6 +303,8 @@ function cloudrun_service {
                   value: "${SECURITY_CATEGORY_KEY}"
                 - name: GR07_03_ALLOWED_CA_ISSUERS
                   value: "${CA_ISSUERS}"
+                - name: GR13_03_BREAKGLASS_USER_EMAIL
+                  value: "${BREAKGLASS_USER_EMAIL}"
                 resources:
                   limits:
                     cpu: 1000m
@@ -330,14 +329,14 @@ function cloudrun_service {
           - percent: 100
             latestRevision: true
 EOF
-  
+
   # a buffer so google is ready for subsequent call
 
   gcloud --impersonate-service-account=${SERVICE_ACCOUNT} \
-  run services replace cloudrun.yaml \
-  >>$LOG_FILE 2>&1
+    run services replace cloudrun.yaml \
+    >>$LOG_FILE 2>&1
   # Get the URL of the Cloud Run service
-  
+
   CSERVICE_URL=$(gcloud run services describe "$CLOUD_RUN" --format='value(status.url)' --region="$REGION")
 
   # Create the Cloud Scheduler job
@@ -362,7 +361,6 @@ input_language
 echo "$LANG_DEPLOYMENT_PROMPT"
 echo "$LANG_DEPLOYMENT_PROMPT" >>$LOG_FILE
 
-. ./collector_config
 config_init
 
 service_account
@@ -376,4 +374,4 @@ echo "
 ## Compliance Proof GCS Bucket: gs://$BUCKET_NAME       
 ## Cloud Run Service:  $CSERVICE_URL                                 
 ##
-#################################################################               "                             
+#################################################################               "

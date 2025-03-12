@@ -20,6 +20,7 @@ import os
 import logging
 import time
 import re
+import pytz
 from datetime import datetime, timedelta, timezone
 from cryptography import x509
 
@@ -46,6 +47,8 @@ customer_id = os.environ['CUSTOMER_ID'] # your directory customer ID (`gcloud or
 # your Workspace domain, if env var not provided,
 # it is implied you do not have a Workspace account, then use empty string '' as default
 ws_domain = os.environ.get('WORKSPACE_DOMAIN', '')
+org_admin_group_email = os.environ.get('ORG_ADMIN_GROUP_EMAIL', f"gcp-organization-admins@{ws_domain}")
+breakglass_user_email = os.environ.get['BREAKGLASS_USER_EMAIL', 'breakglass@ssc.gc.ca']
 
 credentials, project_id = google.auth.default()
 
@@ -56,15 +59,15 @@ asset_parent = f"organizations/{org_id}"
 content_type_list = ["RESOURCE", "ACCESS_POLICY", "IAM_POLICY"]
 
 # PROFILE is the Profile level i.e. "Profile 1", "Profile 2", etc.
-# SECURITY_CATEGORY is "Unclassified", "Protected A", etc
-tag_key_list = ["PROFILE", "SECURITY_CATEGORY"]
+# DATA_CLASSIFICATION is "Unclassified", "Protected A", etc
+tag_key_list = ["PROFILE", "DATA_CLASSIFICATION"]
 
 lock = threading.Lock()
 scc_parent = f"organizations/{org_id}/sources/-"
 scc_logs = []
 logger_resource_name = [f"organizations/{org_id}"]
 customer_id_parent = f"customers/{customer_id}"
-days_back_admin = 1
+days_back_admin = 90
 hours_back_cloudaudit = 6
 f_name = f"results-{org_name}.json"
 timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d")
@@ -80,16 +83,14 @@ gcs_folder_objects = []
 credentials, project_id = google.auth.default()
 
 logger_export_adminapis_admin = (
-    f'protoPayload.request.query="parent=organizations/{org_id}"'
+    f'logName="organizations/{org_id}/logs/cloudaudit.googleapis.com%2Factivity"'
     f' AND protoPayload.serviceName="admin.googleapis.com"'
-    f' AND timestamp>="{(datetime.now(timezone.utc) - timedelta(days=days_back_admin)).strftime("%Y-%m-%dT%H:%M:%S.%f%z")}"'
-    f' AND timestamp<"{(datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f%z"))}"'
+    f' AND timestamp>="{(datetime.now(timezone.utc) - timedelta(days=days_back_admin)).isoformat()}"'
 )
 
 logger_export_adminapis_cloudaudit = (
     f'logName="organizations/{org_id}/logs/cloudaudit.googleapis.com%2Factivity"'
-    f' AND timestamp>="{(datetime.now(timezone.utc) - timedelta(hours=hours_back_cloudaudit)).strftime("%Y-%m-%dT%H:%M:%S.%f%z")}"'
-    f' AND timestamp<"{(datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f%z"))}"'
+    f' AND timestamp>="{(datetime.now(timezone.utc) - timedelta(hours=hours_back_cloudaudit)).isoformat()}"'
 )
 
 # Schema for JSON outputs
@@ -296,7 +297,7 @@ def essentialcontacts_export(asset_parent):
         List of Essential Contacts
     """
     logger.info("Compiling Essential Contacts Data")
-    ec_client = build("essentialcontacts", "v1", credentials=credentials)
+    ec_client = build("essentialcontacts", "v1", credentials=credentials, cache_discovery=False)
     request = ec_client.organizations().contacts().list(parent=asset_parent)
     results = request.execute()
     ec_contacts = []
@@ -318,16 +319,17 @@ def workspace_users_export(ws_domain):
         Workspace users' (config) info
     """
     logger.info("Compiling Workspace User Data")
-    results = []
+    ws_users = []
     # if ws_domain is NOT set
     if ws_domain == '':
         logger.info("No Workspace domain set -- cannot query Workspace user data")
-        return []
+        return json.dumps([])
     # if ws_domain is set
     try:
-        ws_client = build("admin", "directory_v1", credentials=credentials)
+        ws_client = build("admin", "directory_v1", credentials=credentials, cache_discovery=False)
         request = ws_client.users().list(domain=ws_domain)
         results = request.execute()
+        ws_users.append(results)
     except Exception as e:
         if e.resp.status == 403:
             logger.error("Permission denied. Ensure you have the necessary permissions/scopes")
@@ -337,10 +339,11 @@ def workspace_users_export(ws_domain):
             logger.error(f"An unexpected HTTP error occurred: {e}")
     except google.auth.exceptions.GoogleAuthError as auth_error:
         logger.error(f"Authentication error: {auth_error}")
-    return json.dumps(results, separators=(',', ':'))
+    return json.dumps(ws_users, separators=(',', ':'))
 
 
 # Access Context Manager policy access levels export
+# NOT BEING USED
 def acm_export(asset_parent):
     """Get Access Context Manager policies
     Args:
@@ -350,7 +353,7 @@ def acm_export(asset_parent):
         List of ACM policies
     """
     logger.info("Compiling Access Context Manager Data")
-    acm_client = build("accesscontextmanager", "v1", credentials=credentials)
+    acm_client = build("accesscontextmanager", "v1", credentials=credentials, cache_discovery=False)
     request = acm_client.accessPolicies().list(parent=asset_parent)
     results = request.execute()
     # get a list of ACM policies that is not the "default policy"
@@ -366,12 +369,47 @@ def acm_export(asset_parent):
         acm_access_levels.append({"kind": "accesscontextmanager#accesspolicy", "policyName": acm_policy, "config": results})
     return json.dumps(acm_access_levels, separators=(',', ':'))
 
+# Auth logs of users from Cloud Logging export
+def user_auth_ip_export(hours):
+    """Retrieves project authentication logs in the last X hours
+    Args:
+        hours (int): number of hours to filter logs
+
+    Returns:
+        A list of authentication log entries (if any)
+    """
+    auth_log_client = google.cloud.logging.Client(project=project_id)
+    now = datetime.now(tz=pytz.utc)
+    time_hours_ago = now - timedelta(hours=hours)
+    filter_str = f'timestamp >= "{time_hours_ago.isoformat()}" \
+                   AND logName="projects/{project_id}/logs/cloudaudit.googleapis.com%2Factivity" \
+                   -protoPayload.serviceName="iam.googleapis.com" \
+                   -protoPayload.serviceName="k8s.io"'
+    try:
+        entries = auth_log_client.list_entries(filter_=filter_str)
+    except Exception as e:
+        logger.error(f"Error retrieving logs from Cloud Logging: {e}")
+    user_auth_logs_list = []
+    try:
+        for entry in entries:
+            principal_email = entry.payload['authenticationInfo']['principalEmail']
+            source_ip = entry.payload['requestMetadata']['callerIp']
+            caller_user_agent = entry.payload['requestMetadata']['callerSuppliedUserAgent']
+            # excluding cloudshell, gsa and internal auths
+            if 'environment/devshell' not in caller_user_agent and not principal_email.endswith('iam.gserviceaccount.com') and source_ip != 'private':
+                # insertId can be used to find specific log entry
+                user_auth_logs_list.append({"kind": "logging#user#auth", "insertId": entry.insert_id, "principalEmail": principal_email, "sourceIp": source_ip, "timestamp": entry.timestamp.isoformat()})
+    except KeyError:
+        pass
+    return json.dumps(user_auth_logs_list, separators=(',', ':'))
+
 # Org Admin Group member export
-def org_admin_group_member_export(customer_id_parent, ws_domain):
+def org_admin_group_member_export(customer_id_parent, ws_domain, org_admin_group_email):
     """Get Org Admin group member data
     Args:
         customer_id_parent: customer ID
-        ws_domain: Workspace domain (if any) 
+        ws_domain: Workspace domain
+        org_admin_group_email: Org admin group email (if none provided, assumes default of gcp-organization-admins@{ws_domain})
 
     Returns:
         List of Org Admin members
@@ -380,25 +418,35 @@ def org_admin_group_member_export(customer_id_parent, ws_domain):
     # if ws_domain is NOT set
     if ws_domain == '':
         logger.info("No Workspace domain set -- cannot query Org Admin Group member data")
-        return []
-    cloudidentity_client = build("cloudidentity", "v1", credentials=credentials)
+        return json.dumps([])
+    cloudidentity_client = build("cloudidentity", "v1", credentials=credentials, cache_discovery=False)
     # find group name
     request = cloudidentity_client.groups().list(parent=customer_id_parent)
     results = request.execute()
-    for group in results["groups"]:
-        if group["groupKey"]["id"] == f"gcp-organization-admins@{ws_domain}":
-            group_name = group["name"]
-    # find group membership
-    request = cloudidentity_client.groups().memberships().list(parent=group_name)
-    results = request.execute()
-    member_list = []
-    for membership in results["memberships"]:
-        # prepending "user:" to the user email to align with output from GCP role bindings
-        user = "user:" + membership["preferredMemberKey"]["id"]
-        member_list.append(user)
-    # compiling final output JSON
-    org_admin_member_list = []
-    org_admin_member_list.append({"kind": "cloudidentity#groups#membership", "groupName": group_name, "groupEmail": f"gcp-organization-admins@{ws_domain}", "members": member_list})
+    try:
+        for group in results["groups"]:
+            if group["groupKey"]["id"] == org_admin_group_email:
+                group_name = group["name"]
+        # find group membership
+        request = cloudidentity_client.groups().memberships().list(parent=group_name)
+        results = request.execute()
+        member_list = []
+        for membership in results["memberships"]:
+            # prepending "user:" to the user email to align with output from GCP role bindings
+            user = "user:" + membership["preferredMemberKey"]["id"]
+            member_list.append(user)
+        # compiling final output JSON
+        org_admin_member_list = []
+        org_admin_member_list.append({"kind": "cloudidentity#groups#membership", "groupName": group_name, "groupEmail": f"gcp-organization-admins@{ws_domain}", "members": member_list})
+        except KeyError:
+        logger.error(f"Please validate permissions. KeyError encountered listing group membership for group: {group}")
+            return json.dumps([])
+    except KeyError:
+        logger.error("Please validate permissions. KeyError encountered listing groups")
+        return json.dumps([])
+    except UnboundLocalError:
+        logger.error("Org Admin Group not found. Please validate your ORG_ADMIN_GROUP_EMAIL input")
+        return json.dumps([])
     return json.dumps(org_admin_member_list, separators=(',', ':'))
 
 # Resource Tag Value export
@@ -430,27 +478,60 @@ def org_resource_tag_value_export(customer_id_parent, tag_key_list):
 
 # Certificate Manager Cert Issuer export - applies only to Direct Tags
 def certmanager_export(certmanager_resource_id):
-    """Get assets with Tags
+    """Get Certs data
     Args:
         certmanager_resource_id: project and location of the certificate
 
     Returns:
         List of Certificate Manager certificates with issuer info
     """
-    service = build('certificatemanager', 'v1')
+    service = build('certificatemanager', 'v1', credentials=credentials, cache_discovery=False)
     request = service.projects().locations().certificates().list(parent=certmanager_resource_id)
     results = request.execute()
     certificates_list = []
-    for i in range(len(results["certificates"])):
-        cert_data = results["certificates"][i]["pemCertificate"]
-        decoded_cert = decode_cert(cert_data)
-        issuer_org = extract_issuer(decoded_cert)
-        if issuer_org is None:
-            certificates_list.append({"kind": "certificatemanager#certificate#issuer", "name": results["certificates"][i]["name"], "issuer_org": "NONE"})
-        else:
-            certificates_list.append({"kind": "certificatemanager#certificate#issuer", "name": results["certificates"][i]["name"], "issuer_org": issuer_org})
+    try:
+        for i in range(len(results["certificates"])):
+            cert_data = results["certificates"][i]["pemCertificate"]
+            decoded_cert = decode_cert(cert_data)
+            issuer_org = extract_issuer(decoded_cert)
+            if issuer_org is None:
+                certificates_list.append({"kind": "certificatemanager#certificate#issuer", "name": results["certificates"][i]["name"], "issuer_org": "NONE"})
+            else:
+                certificates_list.append({"kind": "certificatemanager#certificate#issuer", "name": results["certificates"][i]["name"], "issuer_org": issuer_org})
+    except KeyError:
+        logger.info(f"No certificates found in project: {project_id}")
+        return json.dumps([])
     return json.dumps(certificates_list, separators=(',', ':'))
 
+def breakglass_auth_export(days, breakglass_user_email):
+    """Retrieves Organizationa authentication logs in for breakglass user account in the last X days
+    Args:
+        days (int): number of days to filter logs
+        breakglass_user_email (string): breakglass user email
+
+    Returns:
+        A list of authentication log entries (if any)
+    """
+    auth_log_client = google.cloud.logging.Client()
+    now = datetime.now(tz=pytz.utc)
+    time_days_ago = now - timedelta(days=days)
+    filter_str = f'timestamp >= "{time_days_ago.isoformat()}" \
+                   AND logName="organizations/{org_id}/logs/cloudaudit.googleapis.com%2Factivity" \
+                   AND protoPayload.authenticationInfo.principalEmail="{breakglass_user_email}" \
+                   -protoPayload.serviceName="iam.googleapis.com" \
+                   -protoPayload.serviceName="k8s.io"'
+    try:
+        entries = auth_log_client.list_entries(resource_names=[asset_parent], filter_=filter_str)
+    except Exception as e:
+        logger.error(f"Error retrieving logs: {e}")
+    breakglass_auth_logs_list = []
+    try:
+        for entry in entries:
+            principal_email = entry.payload['authenticationInfo']['principalEmail']
+            breakglass_auth_logs_list.append({"kind": "logging#breakglass#auth", "principalEmail": principal_email, "timestamp": entry.timestamp.isoformat()})
+    except KeyError:
+        pass
+    return json.dumps(breakglass_auth_logs_list, separators=(',', ':'))
 
 # Main API endpoint
 @app.route('/', methods=['GET'])
@@ -459,7 +540,7 @@ def upload_json():
     overall_start_time = time.time()
 
     # Step 1: Export assets in parallel
-    logger.info("Step 1 of 11 - Export assets in parallel")
+    logger.info("Step 1 of 12 - Export assets in parallel")
     asset_data = parallelized_asset_export(asset_parent, content_type_list)
 
     # Prepare batch upload tasks
@@ -468,53 +549,58 @@ def upload_json():
     ]
 
     # Step 2: SCC export
-    logger.info("Step 2 of 11 - SSC export")
+    logger.info("Step 2 of 12 - SSC export")
     scc_data = json.loads(scc_export(scc_logs, scc_parent))
     upload_tasks.append((scc_data, "data/scc.json"))
 
     # Step 3: Logger export
-    logger.info("Step 3 of 11 - Logger export")
+    logger.info("Step 3 of 12 - Logger export")
     logger_data = json.loads(logger_export(logger_export_adminapis_admin, logger_export_adminapis_cloudaudit, logger_resource_name))
     upload_tasks.append((logger_data, "data/logger.json"))
 
     # Step 4: GCS folder export
-    logger.info("Step 4 of 11 - GCS folder export")
+    logger.info("Step 4 of 12 - GCS folder export")
     gcs_folder_data = json.loads(gcs_export(gcs_folders, gcs_folder_objects, bucket_name))
     upload_tasks.append((gcs_folder_data, "data/gcs.json"))
 
     # Step 5: Essential Contacts export
-    logger.info("Step 5 of 11 - Essential Contacts export")
+    logger.info("Step 5 of 12 - Essential Contacts export")
     essentialcontacts_data = json.loads(essentialcontacts_export(asset_parent))
     upload_tasks.append((essentialcontacts_data, "data/essentialcontacts.json"))
 
     # Step 6: Workspace Users export
-    logger.info("Step 6 of 11 - Workspace Users export")
+    logger.info("Step 6 of 12 - Workspace Users export")
     ws_user_data = json.loads(workspace_users_export(ws_domain))
     upload_tasks.append((ws_user_data, "data/ws_users.json"))
 
-    # Step 7: Access Context Manager (ACM) access levels export
-    logger.info("Step 7 of 11 - Access Context Manager export")
-    acm_data = json.loads(acm_export(asset_parent))
-    upload_tasks.append((acm_data, "data/acm.json"))
+    # Step 7: 25 hour GCP User auth data export
+    logger.info("Step 7 of 12 - GCP User Auth data export")
+    user_auth_data = json.loads(user_auth_ip_export(25))
+    upload_tasks.append((user_auth_data, "data/user_auth_data.json"))
 
     # Step 8: Org Admin Group members export
-    logger.info("Step 8 of 11 - Org Admin Group members export")
-    org_admin_group_member_data = json.loads(org_admin_group_member_export(customer_id_parent, ws_domain))
+    logger.info("Step 8 of 12 - Org Admin Group members export")
+    org_admin_group_member_data = json.loads(org_admin_group_member_export(customer_id_parent, ws_domain, org_admin_group_email))
     upload_tasks.append((org_admin_group_member_data, "data/org_admin_group_members.json"))
 
     # Step 9: Asset tags export
-    logger.info("Step 9 of 11 - Asset tags export")
+    logger.info("Step 9 of 12 - Asset tags export")
     org_resource_tag_value_data = json.loads(org_resource_tag_value_export(asset_parent, tag_key_list))
     upload_tasks.append((org_resource_tag_value_data, "data/org_resource_tag_value_export.json"))
 
     # Step 10: Cert Manager export
-    logger.info("Step 10 of 11 - Cert manager export")
+    logger.info("Step 10 of 12 - Cert manager export")
     certmanager_data = json.loads(certmanager_export(certmanager_resource_id))
     upload_tasks.append((certmanager_data, "data/certmanager_export.json"))
 
-    # Step 11: Compile final data
-    logger.info("Step 11 of 11 - Compiling final data")
-    final_list = asset_data + scc_data + logger_data + gcs_folder_data + essentialcontacts_data + ws_user_data + acm_data + org_admin_group_member_data + org_resource_tag_value_data + certmanager_data
+    # Step 11: 366 days Breakglass Account auth data export
+    logger.info("Step 11 of 12 - GCP Breakglass User Auth data export")
+    breakglass_auth_data = json.loads(breakglass_auth_export(366, breakglass_user_email))
+    upload_tasks.append((breakglass_auth_data, "data/breakglass_auth_data.json"))
+
+    # Step 12: Compile final data
+    logger.info("Step 12 of 12 - Compiling final data")
+    final_list = asset_data + scc_data + logger_data + gcs_folder_data + essentialcontacts_data + ws_user_data + user_auth_data + org_admin_group_member_data + org_resource_tag_value_data + certmanager_data + breakglass_auth_data
     compiled_data = {"input": {"data": final_list}}
     upload_tasks.append((compiled_data, "data/compiled.json"))
 
@@ -525,10 +611,16 @@ def upload_json():
     duration_td = timedelta(seconds=overall_end_time - overall_start_time)
     logger.info(f"Time taken to execute operation: {duration_td}")
 
+
+    time.sleep(5)
     # Evaluate compiled data
     response = requests.post("http://localhost:8181/v1/data/main/guardrail", json=compiled_data)
     if response.ok:
-        filtered_json_objects = response.json().get('result', [])
+        response_data = response.json()
+        try:
+            filtered_json_objects = response_data['result']
+        except KeyError:
+            logger.info(f"KEYERROR - NO RESPONSE_DATA")
         filtered_json_objects = JSONObjectSchema(
             many=True).dump(filtered_json_objects)
         beautified_filtered_json_objects = json.dumps(

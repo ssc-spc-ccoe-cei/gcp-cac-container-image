@@ -5,14 +5,15 @@ export SERVICE_ACCOUNT="cac-dev-37505682288-sa@cacv2-devproj.iam.gserviceaccount
 # Organization Name
 export ORG_ID="37505682288"
 export ORG_NAME="lab-rat.ca"
-export DOMAIN="lab-rat.ca"
+#export DOMAIN="lab-rat.ca"
+export ORG_ADMIN_GROUP_EMAIL="gcp-organization-admins@163gccspm.gccspm.gc.ca"
 # GC Cloud Usage Profile number
 export GC_PROFILE="1"
 export GCP_PROJECT="cacv2-devproj"
 # Tag Key used to identify security classification of GCP resources
 # example: a GCS bucket can be identified as containing Protected "A" data by tagging it
 # SECURITY_CATEGORY: Protected A
-export SECURITY_CATEGORY_KEY="SECURITY_CATEGORY"
+export SECURITY_CATEGORY_KEY="DATA_CLASSIFICATION"
 # List of Privileged Users and their regular account names
 # Format: '(user:admin1@org.ca,user:admin2@org.ca,user:admin3@org.ca)'
 export PRIVILEGED_USERS_LIST="user:jenn@lab-rat.ca"
@@ -44,7 +45,7 @@ export POLICY_REPO="cac_policies"
 export POLICY_PROJECT="cacv2-devproj"
 export REGION="northamerica-northeast1"
 export CAC_IMAGE="northamerica-northeast1-docker.pkg.dev/cacv2-devproj/cac-python/cac-python:432552"
-export OPA_IMAGE="northamerica-northeast1-docker.pkg.dev/cacv2-devproj/opa/opa:0.70.0"
+export OPA_IMAGE="northamerica-northeast1-docker.pkg.dev/cacv2-devproj/opa/opa:0.70.0-googlesdk"
 export BRANCH="main"
 export IMAGE_TAG="v2.0"
 export POLICY_VERSION="2.0"

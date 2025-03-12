@@ -6,6 +6,8 @@ export SERVICE_ACCOUNT="cac-dev-37505682288-sa@cacv2-devproj.iam.gserviceaccount
 export ORG_ID="37505682288"
 export ORG_NAME="lab-rat.ca"
 export DOMAIN="lab-rat.ca"
+export DIRECTORY_CUSTOMER_ID="C018hjxjn"
+export ORG_ADMIN_GROUP_EMAIL="gcp-organization-admins@lab-rat.ca"
 # GC Cloud Usage Profile number
 export GC_PROFILE="1"
 export GCP_PROJECT="cacv2-devproj"

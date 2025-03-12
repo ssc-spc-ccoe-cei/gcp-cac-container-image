@@ -132,7 +132,7 @@ gcloud builds triggers create cloud-source-repositories \
 --name="python-app-image-build" \
 --repo=${APP_REPO_NAME}\
 --branch-pattern=main \
---build-config=buildfiles/pythonapp-cloudbuild.yaml \
+--build-config=python_collector_app/buildfiles/pythonapp-cloudbuild.yaml \
 --service-account=${SERVICE_ACCOUNT} \
 --region "${REGION}" \
 --substitutions=^+^\
@@ -175,7 +175,7 @@ gcloud builds triggers create manual \
 --repo-type="CLOUD_SOURCE_REPOSITORIES" \
 --repo=${POLICY_REPO} \
 --branch="${BRANCH}" \
---build-config=buildfiles/pythonapp-cloudbuild.yaml \
+--build-config=python_collector_app/buildfiles/pythonapp-cloudbuild.yaml \
 --service-account=${SERVICE_ACCOUNT} \
 --region "${REGION}" \
 --substitutions=^+^\
@@ -209,6 +209,7 @@ Create a Cloud Build **MANUAL** trigger for the OPA Container image
 ```bash
 BUILD_PROJECT=
 APP_REPO_NAME=
+BRANCH=
 OPA_VERSION=
 REGION=
 SERVICE_ACCOUNT=
@@ -218,13 +219,13 @@ gcloud config set project $BUILD_PROJECT
 gcloud builds triggers create manual \
 --name="opa-image-build" \
 --repo-type="CLOUD_SOURCE_REPOSITORIES" \
---repo=${APP_REPO_NAME}\
---branch-pattern=main \
---build-config=buildfiles/opa-cloudbuild.yaml \
+--repo=${APP_REPO_NAME} \
+--branch="${BRANCH}" \
+--build-config=python_collector_app/buildfiles/opa-cloudbuild.yaml \
 --service-account=${SERVICE_ACCOUNT} \
 --region="${REGION}" \
 --substitutions=_OPA_VERSION="$OPA_VERSION",\
-_REGION="${REGION}"\
+_REGION="${REGION}",\
 _PROJECT_ID="${BUILD_PROJECT}"
 ```
 

@@ -131,7 +131,7 @@ These results will be aggregated daily into a BigQuery Data set that can be visu
         PROJECT_ID="$(gcloud config get-value project)"
         SERVICE_ACCOUNT="$SERVICE_ACCOUNT_NAME@$PROJECT_ID.iam.gserviceaccount.com"
         DATASET_ID="cac_solution_results"
-        TABLE_ID="raw_compliance_results_test"
+        TABLE_ID="raw_compliance_results"
         gcloud config set auth/impersonate_service_account $SERVICE_ACCOUNT
         curl --request POST \
         "https://bigquery.googleapis.com/bigquery/v2/projects/$PROJECT_ID/datasets/$DATASET_ID/tables" \
