@@ -14,7 +14,7 @@ None
 
 ### Validation 01 - Verify Third-party Marketplace Restrictions have been Implemented
 
-- [12_01-private-marketplace.rego](../policies/12-market-place/12_01-private-marketplace.rego)
+- [12_01-private-marketplace.rego](https://github.com/ssc-spc-ccoe-cei/gcp-cac-policies/12-market-place/12_01-private-marketplace.rego)
 
 Validate third-party marketplace use is only from GC-approved products.
 

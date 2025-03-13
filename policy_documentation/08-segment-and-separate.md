@@ -18,7 +18,7 @@ Segment and separate information based on sensitivity of information.
 
 Validate department's target network architecture has appropriate segmentation between security zones in alignment with GC guidance.
 
-- [08_01-network-architecture-design.rego](../../policies/08-segment-and-separate/08_01-network-architecture-design.rego)
+- [08_01-network-architecture-design.rego](https://github.com/ssc-spc-ccoe-cei/gcp-cac-policies/08-segment-and-separate/08_01-network-architecture-design.rego)
 
 Target network architecture design/diagram to be uploaded/provided for review & approval.  Design should align with the following:
 - [ITSP.50.104](https://www.cyber.gc.ca/en/guidance/itsp50104-guidance-defence-depth-cloud-based-services)
@@ -39,7 +39,7 @@ Target network architecture design/diagram to be uploaded/provided for review & 
 
 Validate department has deployment guide documented for GCP and associated services
 
-- [08_02-deployment-guide.rego](../policies/08-segment-and-separate/08_02-deployment-guide.rego)
+- [08_02-deployment-guide.rego](https://github.com/ssc-spc-ccoe-cei/gcp-cac-policies/08-segment-and-separate/08_02-deployment-guide.rego)
 
 Deployment guide to be uploaded/provided for review & approval.
 
@@ -59,7 +59,7 @@ Validate GCP's segmentation features are leveraged to provide segmentation of ma
 
 *NOTE* this validation relies on the deployment guide in guardrail 08, validation 02.
 
-- [08_03-provider-segmentation-features.rego](../policies/08-segment-and-separate/08_03-provider-segmentation-features.rego)
+- [08_03-provider-segmentation-features.rego](https://github.com/ssc-spc-ccoe-cei/gcp-cac-policies/08-segment-and-separate/08_03-provider-segmentation-features.rego)
 
 Ensure deployment guide is leveraging GCP's features to for project and environment segmentation.
 

@@ -18,7 +18,7 @@ None
 
 Validate that roles required to enable visibility in the GC have been provisioned/assigned.
 
-- [04_01-monitoring-account.rego](../policies/04-monitoring-account/04_01-monitoring-account.rego)
+- [04_01-monitoring-account.rego](https://github.com/ssc-spc-ccoe-cei/gcp-cac-policies/04-monitoring-account/04_01-monitoring-account.rego)
 
 Ensure the appropriate IAM roles are assigned to a Google Cloud Group.
 
@@ -41,7 +41,7 @@ The roles that are being looked for are:
 
 Validate that roles required to enable visibility in the GC have been provisioned or assigned.
 
-- [04_02-suspicious-activity-alerts.rego](../policies/04-monitoring-account/04_02-suspicious-activity-alerts.rego)
+- [04_02-suspicious-activity-alerts.rego](https://github.com/ssc-spc-ccoe-cei/gcp-cac-policies/04-monitoring-account/04_02-suspicious-activity-alerts.rego)
 
 If guardrail 01, validation 05 is compliant, then so this.  
 

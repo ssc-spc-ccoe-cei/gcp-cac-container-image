@@ -39,7 +39,7 @@ Validate that access to cloud environment is from approved and trusted locations
 
 *NOTE* there are 2 parts to this validation: restricting identities by domain, and **checking authentication source IP**
 
-- [03_01-user-auth-source-ip.rego](../policies/03-cloud-console-access/03_01-user-auth-source-ip.rego)
+- [03_01-user-auth-source-ip.rego](https://github.com/ssc-spc-ccoe-cei/gcp-cac-policies/03-cloud-console-access/03_01-user-auth-source-ip.rego)
 
 Client is to provide a list of allowed IPs.  These values are checked against authentication source IPs in the last 24 hours
   
@@ -63,8 +63,6 @@ To achieve **COMPLIANT** status, ICA is to be signed by the client also required
 Validate that access to cloud environment is from approved and trusted locations and from devices managed by GC
 
 *NOTE* there are 2 parts to this validation: restricting identities by domain, and **restricting by IP**
-
-- [03_01-access-context-manager.rego](../policies/03-cloud-console-access/03_01-access-context-manager.rego)
 
 Through Access Context Manager, fine-grained access control can be defined.  Here, the control parameter is by IP.
 

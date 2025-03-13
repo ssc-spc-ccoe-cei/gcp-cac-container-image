@@ -42,7 +42,7 @@ Configure the default password policy in accordance with GC Password Guidance.
 
 Validate that privileged and regular user accounts each have different levels of access/roles
 
-- [02_01-access-config.rego](../policies/02-mgmt-admin-privileges/02_01-access-config.rego)
+- [02_01-access-config.rego](https://github.com/ssc-spc-ccoe-cei/gcp-cac-policies/02-mgmt-admin-privileges/02_01-access-config.rego)
 
 To validate for this we are checking groups for mix of privileged (organization admin) roles and non-privileged roles.  We are also checking to ensure the privileged groups do not contain regular users.
 
@@ -60,7 +60,7 @@ To validate for this we are checking groups for mix of privileged (organization 
 
 Validate access authorization mechanisms have been implemented.
 
-- [02_02-authorization-mechanisms.rego](../policies/02-mgmt-admin-privileges/02_02-authorization-mechanisms.rego)
+- [02_02-authorization-mechanisms.rego](https://github.com/ssc-spc-ccoe-cei/gcp-cac-policies/02-mgmt-admin-privileges/02_02-authorization-mechanisms.rego)
 
 Supporting documents must be provided to attest for the following to confirm that the access authorization mechanisms have been implemented:
 - uniquely identify and authenticate users to the cloud service
@@ -85,7 +85,7 @@ Supporting documents must be provided to attest for the following to confirm tha
 
 Validate role assignment reviews for global admin accounts (organization admins) are performed min. every 12 months.
 
-- [02_03-role-assignment-review.rego](../policies/02-mgmt-admin-privileges/02_03-role-assignment-review.rego)
+- [02_03-role-assignment-review.rego](https://github.com/ssc-spc-ccoe-cei/gcp-cac-policies/02-mgmt-admin-privileges/02_03-role-assignment-review.rego)
 
 Document(s) to provide proof that role assignment reviews need to be uploaded for review/validation.
 
@@ -127,7 +127,7 @@ GCP receives an automatics **COMPLIANT** status in this validation as GCP avoids
 
 Validate password policies have been configured.
 
-- [02_06-password-policy.rego](../policies/02-mgmt-admin-privileges/02_06-password-policy.rego)
+- [02_06-password-policy.rego](https://github.com/ssc-spc-ccoe-cei/gcp-cac-policies/02-mgmt-admin-privileges/02_06-password-policy.rego)
   
 Screenshot of configured Password Management options as evidence for attestation must be uploaded/provided to GCS bucket for review/approval.
 
@@ -161,7 +161,7 @@ Validate list of non-organization users (if any) with elevated privileges is pro
 
 *NOTE* this validation compliments guardrail 02, validation 09
 
-- [02_08-guest-accounts.rego](../policies/02-mgmt-admin-privileges/02_08-guest-accounts.rego)
+- [02_08-guest-accounts.rego](https://github.com/ssc-spc-ccoe-cei/gcp-cac-policies/02-mgmt-admin-privileges/02_08-guest-accounts.rego)
 
 The definition of "elevated" is ambiguous and cannot be baselined across all organizations, so the approach being taken is that any users NOT in an organization's cloud tenant is considered to have elevated privileges as they are guests.
 
@@ -183,7 +183,7 @@ Validate list of non-organization users (if any) with elevated privileges is pro
 
 *NOTE* this validation compliments guardrail 02, validation 08
 
-- [02_09-non-org-users.rego](../policies/02-mgmt-admin-privileges/02_09-non-org-users.rego)
+- [02_09-non-org-users.rego](https://github.com/ssc-spc-ccoe-cei/gcp-cac-policies/02-mgmt-admin-privileges/02_09-non-org-users.rego)
 
 Client must provide a list of guest users (if any)
 
@@ -203,7 +203,7 @@ Client must provide a list of guest users (if any)
 
 Validate reviews of guest access are performed periodically.
 
-- [02_10-guest-account-reviews.rego](../policies/02-mgmt-admin-privileges/02_10-guest-account-reviews.rego)
+- [02_10-guest-account-reviews.rego](https://github.com/ssc-spc-ccoe-cei/gcp-cac-policies/02-mgmt-admin-privileges/02_10-guest-account-reviews.rego)
 
 Attestation for review performed is required to be uploaded/provided to GCS bucket for review/approval.
 

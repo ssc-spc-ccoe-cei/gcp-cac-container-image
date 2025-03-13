@@ -20,7 +20,7 @@ None
 
 Validate MFA implemented according to GC guidance.
 
-- [01_0102-mfa.rego](../policies/01-protect-accounts/01_0102-mfa.rego)
+- [01_0102-mfa.rego](https://github.com/ssc-spc-ccoe-cei/gcp-cac-policies/01-protect-accounts/01_0102-mfa.rego)
 
 Query Google Workspace for user list and check whether `isEnforcedIn2Sv` is set to `true`.  The field, `isEnrolledIn2Sv` is not checked against here as it may be return false even though user is enrolled (via an external identity provider such as Azure AD)
 
@@ -38,7 +38,7 @@ Query Google Workspace for user list and check whether `isEnforcedIn2Sv` is set 
 
 Validate number of global (organization) administrators is between 2 and 5.
 
-- [01_03-global-admin-count.rego](../policies/01-protect-accounts/01_03-global-admin-count.rego)
+- [01_03-global-admin-count.rego](https://github.com/ssc-spc-ccoe-cei/gcp-cac-policies/01-protect-accounts/01_03-global-admin-count.rego)
 
 Find list of users in **gcp-organization-admin@ORG_DOMAIN** group.  Find list of users with Organization Admin role assigned.  Find the set (no duplicates) of users in the combined lists and find count.
 
@@ -54,7 +54,7 @@ Find list of users in **gcp-organization-admin@ORG_DOMAIN** group.  Find list of
 
 Validate that monitoring and monitoring is implemented for all user accounts.
 
-- [01_04-user-account-auditing.rego](../policies/01-protect-accounts/01_04-user-account-auditing.rego)
+- [01_04-user-account-auditing.rego](https://github.com/ssc-spc-ccoe-cei/gcp-cac-policies/01-protect-accounts/01_04-user-account-auditing.rego)
 
 In the Admin console, you can share data from your Google Workspace, Cloud Identity, or Essentials account with services in your organization’s Google Cloud account. You can access the shared data through the Google Cloud audit logs.
 
@@ -83,7 +83,7 @@ If you have Enterprise, Education Standard or Education Plus, Voice Premier, or 
 
 Validate that authorized personnel are alerted when suspected misuse or suspicious activities occur for user accounts.
 
-- [01_05-reporting-rules.rego](../policies/01-protect-accounts/01_05-reporting-rules.rego)
+- [01_05-reporting-rules.rego](https://github.com/ssc-spc-ccoe-cei/gcp-cac-policies/01-protect-accounts/01_05-reporting-rules.rego)
 
 Enrollment in Security Command Center (SCC) Premium earns an automatic COMPLIANT status in this validation as provides Event Threat Detections.  It is not necessarily a realistic expectation that the client with have SCC Premium tier and hence this particular validation will focus on an alternative solution.
 
@@ -105,7 +105,7 @@ As the Alert Center API is currently v1beta1 and does not have the capability to
 
 Validate that there are dedicated user accounts for administrative/privileged access.
 
-- [01_06-dedicated-admin-accounts.rego](../policies/01-protect-accounts/01_06-dedicated-admin-accounts.rego)
+- [01_06-dedicated-admin-accounts.rego](https://github.com/ssc-spc-ccoe-cei/gcp-cac-policies/01-protect-accounts/01_06-dedicated-admin-accounts.rego)
 
 From two client-provided lists of usernames (one privileged, one non-privileged "regular" user counterparts), this validation is to find out whether there is any overlap in privileged (organization admin) roles between the privileged and regular user accounts.
 

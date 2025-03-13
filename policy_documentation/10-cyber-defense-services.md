@@ -15,7 +15,7 @@ None
 
 ### Validation 01 - Verify Memorandum of Understanding (MOU) has been Signed
 
-- [10_01-mou.rego](../../policies/10-cyber-defense-services/10_01-mou.rego)
+- [10_01-mou.rego](https://github.com/ssc-spc-ccoe-cei/gcp-cac-policies/10-cyber-defense-services/10_01-mou.rego)
 
 Ensure that the memorandum of understanding (MOU) has been signed.
 
@@ -33,7 +33,7 @@ Signed MOU is to be uploaded to attestation `guardrail-10` folder.
 
 ### Validation 02 - Verify Cyber Defense Services Implemented Where Available
 
-- [10_02-cyber-defense.rego](../policies/10-cyber-defense-services/10_02-cyber-defense.rego)
+- [10_02-cyber-defense.rego](https://github.com/ssc-spc-ccoe-cei/gcp-cac-policies/10-cyber-defense-services/10_02-cyber-defense.rego)
 
 Ensure that Cyber Centre's sensors or other cyber defense services are implemented.
 

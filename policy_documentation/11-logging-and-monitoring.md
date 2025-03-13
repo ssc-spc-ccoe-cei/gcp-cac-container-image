@@ -24,7 +24,7 @@ None
 ### Validation 01 - Verify Policy for Event Logging is Implemented
 ### Validation 02 - Verify Essential Logs are Included
 
-- [11_0102-event-logging.rego](../policies/11-logging-and-monitoring/11_0102-event-logging.rego)
+- [11_0102-event-logging.rego](https://github.com/ssc-spc-ccoe-cei/gcp-cac-policies/11-logging-and-monitoring/11_0102-event-logging.rego)
 
 Ensure the folloiwng logs are included:
 - sign-ins
@@ -44,7 +44,7 @@ Ensure the folloiwng logs are included:
 
 ### Validation 03 - Verify Whether Monitoring & Auditing is Implemented for All Users
 
-- [11_03-monitoring-and-auditing.rego](../../policies/11-logging-and-monitoring/11_03-monitoring-and-auditing.rego)
+- [11_03-monitoring-and-auditing.rego](https://github.com/ssc-spc-ccoe-cei/gcp-cac-policies/11-logging-and-monitoring/11_03-monitoring-and-auditing.rego)
 
 Validate whether monitoring & auditing has been implemented for all users.
 
@@ -60,7 +60,7 @@ Validate whether monitoring & auditing has been implemented for all users.
 
 ### Validation 04 - Verify Essential Contacts have been Configured
 
-- [11_04-essential-contacts.rego](../policies/11-logging-and-monitoring/11_04-essential-contacts.rego)
+- [11_04-essential-contacts.rego](https://github.com/ssc-spc-ccoe-cei/gcp-cac-policies/11-logging-and-monitoring/11_04-essential-contacts.rego)
 
 Validate there are at least two (2) information security personnel on the security contact record.
 
@@ -86,7 +86,7 @@ Validate logs are collected using a common time zone.
 
 ### Validation 06 - Verify Monitoring Use Cases for GCP have been Implemented and Integrated with Security Monitoring Activities
 
-- [11_06-monitoring-use-cases.rego](../policies/11-logging-and-monitoring/11_06-monitoring-use-cases.rego)
+- [11_06-monitoring-use-cases.rego](https://github.com/ssc-spc-ccoe-cei/gcp-cac-policies/11-logging-and-monitoring/11_06-monitoring-use-cases.rego)
 
 Validate that the monitoring use cases for GCP have been implemented and demonstrate that it has been integrated with overall security monitoring activities.
 

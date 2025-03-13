@@ -19,7 +19,7 @@ Ensure that there is a plan for continuity of access and service that accommodat
 
 ### Validation 01 - Verify Emergency Account Procedure
 
-- [13_01-emergency-account-procedure.rego](../policies/13-plan-for-continuity/13_01-emergency-account-procedure.rego)
+- [13_01-emergency-account-procedure.rego](https://github.com/ssc-spc-ccoe-cei/gcp-cac-policies/13-plan-for-continuity/13_01-emergency-account-procedure.rego)
 
 Ensure that an emergency account management procedure has been created.
 
@@ -37,7 +37,7 @@ Document(s) containing emergency account management procedure required to be upl
 
 ### Validation 02 - Verify Alerts for Emergency Account Usage are In Place
 
-- [13_02-emergency-account-alerts.rego](../policies/13-plan-for-continuity/13_02-emergency-account-alerts.rego)
+- [13_02-emergency-account-alerts.rego](https://github.com/ssc-spc-ccoe-cei/gcp-cac-policies/13-plan-for-continuity/13_02-emergency-account-alerts.rego)
 
 Ensure that alerts are in place to report any emergency account .
 
@@ -53,7 +53,7 @@ A GCP Alert Policy is required to be setup to report on any emergency account us
 
 ### Validation 03 - Verify Periodic Emergency Account Testing is Being Conducted
 
-- [emergency-account-testing.rego](../policies/13-plan-for-continuity/13_03-emergency-account-testing.rego)
+- [emergency-account-testing.rego](https://github.com/ssc-spc-ccoe-cei/gcp-cac-policies/13-plan-for-continuity/13_03-emergency-account-testing.rego)
 
 Ensure that an emergency account management procedure has been created.
 
@@ -71,7 +71,7 @@ Document(s) containing emergency account management procedure required to be upl
 
 ### Validation 04 - Verify Emergency Account Procedure received CIO Approval
 
-- [13_04-dept-cio-approval.rego](../policies/13-plan-for-continuity/13_04-dept-cio-approval.rego)
+- [13_04-dept-cio-approval.rego](https://github.com/ssc-spc-ccoe-cei/gcp-cac-policies/13-plan-for-continuity/13_04-dept-cio-approval.rego)
 
 Ensure that an emergency account management procedure has been created.
 

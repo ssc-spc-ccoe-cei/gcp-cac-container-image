@@ -18,8 +18,8 @@ None
 
 Validate TLS 1.2 or above is being used across all cloud services and ensure self-managed services also meet TLS restriction requirements.
 
-[07_0102-check-forwarding-rules.rego](../policies/07-protect-data-in-transit/07_0102-check-forwarding-rules.rego)
-[07_0102-minimum-tls-version.rego](../policies/07-protect-data-in-transit/07_0102-minimum-tls-version.rego)
+[07_0102-check-forwarding-rules.rego](https://github.com/ssc-spc-ccoe-cei/gcp-cac-policies/07-protect-data-in-transit/07_0102-check-forwarding-rules.rego)
+[07_0102-minimum-tls-version.rego](https://github.com/ssc-spc-ccoe-cei/gcp-cac-policies/07-protect-data-in-transit/07_0102-minimum-tls-version.rego)
 
 Google Cloud allows you to define SSL policies for SSL and TLS protocols. To define an SSL policy, you specify a minimum TLS version and a profile. The profile selects a set of SSL features to enable in the load balancer. When creating a load balancer you can set which SSL policy it will use.
 
@@ -53,7 +53,7 @@ More information about SSL policies can be found here: [link](https://cloud.goog
 
 Validate certificates are issued from CAs that align with GC recommendations.
 
-[07_03-cert-issuer.rego](../policies/07-protect-data-in-transit/07_03-cert-issuer.rego)
+[07_03-cert-issuer.rego](https://github.com/ssc-spc-ccoe-cei/gcp-cac-policies/07-protect-data-in-transit/07_03-cert-issuer.rego)
 
 Pull certificate data from Certificate Manager and compare Issuer with client-provided list of allowed Issuers.
 

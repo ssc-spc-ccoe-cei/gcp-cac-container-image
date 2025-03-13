@@ -16,7 +16,7 @@ None
 
 Validate that for all Protected B cloud services, its location is within Canada where configurable and aligns with the applicable cloud usage profiles
 
-[05_01-data-location.rego](../policies/05-data-location/05_01-data-location.rego)
+[05_01-data-location.rego](https://github.com/ssc-spc-ccoe-cei/gcp-cac-policies/05-data-location/05_01-data-location.rego)
 
 This policy will look through each resource and first check for the presence of a `location` field. If the field is not present then the resource isn't a location-based resource and can be safely ignored.
 

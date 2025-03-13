@@ -56,7 +56,7 @@ To achieve **COMPLIANT** status, ICA is to be signed by the client also required
 
 Validate that GCS buckets are not publicly accessible (i.e. to non-authenticated users)
 
-- [09_04-gcs-public-bucket-org-policy.rego](../policies/09-network-security-services/09_04-gcs-public-bucket-org-policy.rego)
+- [09_04-gcs-public-bucket-org-policy.rego](https://github.com/ssc-spc-ccoe-cei/gcp-cac-policies/09-network-security-services/09_04-gcs-public-bucket-org-policy.rego)
 Google Cloud provides an organization policy that enforces public access prevention on any Cloud Storage data/buckets. It accomplishes this by disabling and blocking ACLs and IAM permissions that grant access to allUsers and allAuthenticatedUsers on any Cloud Storage resources. This ensures that no data is accidentally or intentionally made public inside Cloud Storage.
 
 **COMPLIANT** if organization policy to enforce public access prevention at the organization level and has not been applied to GCS buckets.
