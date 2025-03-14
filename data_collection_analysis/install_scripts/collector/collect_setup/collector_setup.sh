@@ -2,7 +2,7 @@
 
 set -o errexit
 set -o pipefail
-
+#TEST COMMENT FOR MANINDER
 ## declare an array of policies
 declare -a ROLES=("roles/iam.workloadIdentityUser" "roles/run.developer" "roles/iam.serviceAccountUser" "roles/storage.admin" "roles/cloudscheduler.admin" "roles/run.invoker" "roles/run.serviceAgent" "roles/cloudasset.viewer" "roles/logging.viewer" "roles/securitycenter.adminViewer")
 ROLE_COUNT=$(echo "${ROLES[@]}" | wc -w)
