@@ -438,9 +438,9 @@ def org_admin_group_member_export(customer_id_parent, ws_domain, org_admin_group
         # compiling final output JSON
         org_admin_member_list = []
         org_admin_member_list.append({"kind": "cloudidentity#groups#membership", "groupName": group_name, "groupEmail": f"gcp-organization-admins@{ws_domain}", "members": member_list})
-        except KeyError:
+    except KeyError:
         logger.error(f"Please validate permissions. KeyError encountered listing group membership for group: {group}")
-            return json.dumps([])
+        return json.dumps([])
     except KeyError:
         logger.error("Please validate permissions. KeyError encountered listing groups")
         return json.dumps([])
