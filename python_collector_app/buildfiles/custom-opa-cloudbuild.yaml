@@ -10,4 +10,3 @@ options:
 substitutions:
   _OPA_VERSION: 0.70.0
   _REGION:  northamerica-northeast1
-  _PROJECT_ID: cac-solution-dev
