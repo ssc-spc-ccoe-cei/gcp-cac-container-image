@@ -335,6 +335,14 @@ EOF
   gcloud --impersonate-service-account=${SERVICE_ACCOUNT} \
     run services replace cloudrun.yaml \
     >>$LOG_FILE 2>&1
+  
+  if [ ${BIN_AUTH_ENABLED:-"false"} = "true" ]; then
+    gcloud --impersonate-service-account=${SERVICE_ACCOUNT} \
+      run services update ${CLOUD_RUN} \
+      --binary-authorization=default \
+      --region ${REGION} \
+      >>$LOG_FILE 2>&1
+  fi
   # Get the URL of the Cloud Run service
 
   CSERVICE_URL=$(gcloud run services describe "$CLOUD_RUN" --format='value(status.url)' --region="$REGION")

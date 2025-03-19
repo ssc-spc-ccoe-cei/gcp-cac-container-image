@@ -103,17 +103,16 @@ Binary Authorization is a deploy-time security control that allow you to ensures
 
 **Note** This can be done throught the `gcloud cli` but it is recommended to use the Cloud Console.
 
-### Enabling Binary Authorization in Cloud Run
+### GCP - Enabling Binary Authorization in Cloud Run
 
-1. Update the existing Cloud Run Service to use the newly updated policy to enforce the use of signed images.
+#### In the Application Build Project
+- **Security** --> **Binary Authorization** --> **ATTESTORS**
+- For your attestor, click the 3 dots on the right and *Copy resource ID* (resource ID format: `projects/BUILD_PROJECT_ID/attestors/ATTESTOR_NAME`, i.e. `projects/cac-goat-v2/attestors/cac-attestor-v2`)
 
-```shell
+#### In the Customer/Client Project
+- **Security** --> **Binary Authorization** --> **POLICY**
+- **EDIT POLICY** --> *Default rule* --> select *Require attestations*
+- *ADD ATTESTORS* --> paste in attestor resource ID from Application Build project (step above)
+- (Optional) Check off *Dry-run* mode if which will log violations (if any), but will not enforce
 
-gcloud config set project <cac-deployment-project>
-ORG_ID="$(gcloud organizations list --filter=<ORG_NAME> --format="value(ID)" 2>&1)"
-PROJECT_ID="$(gcloud config get-value project)"
-SERVICE_ACCOUNT="cac-solution-${ORG_ID}-sa@${PROJECT_ID}.iam.gserviceaccount.com"
-
-gcloud --impersonate-service-account="${SERVICE_ACCOUNT}" \
-run services update compliance-analysis --binary-authorization=default
-```
+- set `BIN_AUTH_ENABLED="true"` in your collector_config to enable Bin Auth for your deployment

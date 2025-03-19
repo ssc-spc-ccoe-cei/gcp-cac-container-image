@@ -1,3 +1,5 @@
+### Azure Tenant Domain (if any)
+export TENANT_DOMAIN="163cspmdev.onmicrosoft.com"
 ### GCP Organization Information
 export PROJECT_ID="cacv2-devproj"
 # Service Account Name
@@ -40,6 +42,8 @@ export CA_ISSUERS="Let's Encrypt,Verisign"
 
 
 #############From SSC
+
+export BIN_AUTH_ENABLED="true"
 
 export POLICY_REPO="cac_policies"
 export POLICY_PROJECT="cacv2-devproj"
