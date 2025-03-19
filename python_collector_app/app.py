@@ -48,7 +48,7 @@ customer_id = os.environ['CUSTOMER_ID'] # your directory customer ID (`gcloud or
 # it is implied you do not have a Workspace account, then use empty string '' as default
 ws_domain = os.environ.get('WORKSPACE_DOMAIN', '')
 org_admin_group_email = os.environ.get('ORG_ADMIN_GROUP_EMAIL', f"gcp-organization-admins@{ws_domain}")
-breakglass_user_email = os.environ.get['BREAKGLASS_USER_EMAIL', 'breakglass@ssc.gc.ca']
+breakglass_user_email = os.environ.get('BREAKGLASS_USER_EMAIL', 'breakglass@ssc.gc.ca')
 
 credentials, project_id = google.auth.default()
 
