@@ -17,8 +17,9 @@ The Collector setup script reads configuration information for the application f
 | `_REGULAR_USERS_LIST`     |Regular IDs of Privileged Users                                                |`user:user1@example.ca,user:user2@example.ca`|
 | `_ALLOWED_DOMAINS`        |List of user domains with GCP access enabled                                   |`ssc.gc.ca`|
 | `_DENY_DOMAINS`           |List of user domains that should not have GCP access                           |`outlook.com,gmail.com`|
-| `_HAS_GUEST_USERS`        |Binary flag used to indicate if Guest Users have been added                    |`False`|
-| `_ALLOWED_CIDRS`          | List of CIDR Blocks allowed to access the GCP environment                     |`10.0.0.0/8,192.168.1.0/24`|
+| `_HAS_GUEST_USERS`        |Binary flag used to indicate if Guest Users have been added                    |`false`|
+| `_HAS_FEDERATED_USERS`    |Binary flag used to indicate if Users are federated                            |`true`|
+| `_ALLOWED_IPS`            |List of IPs Blocks allowed to access the GCP environment                       |`10.0.7.44,192.168.0.16`|
 | `_CUSTOMER_IDS`           |List of GCP Org and/or Workspace Customer IDs                                  |`CUSTOMER_IDS='C03xxxx4x,Abc123,XYZ890`|
 | `_CA_ISSUERS`             |List of Acceptable Certifcate Authorities                                      |`"Let's Encrypt,Verisign"`|
 | `_POLICY_REPO`            |URL of Source Control repository hosting the CaC Policies                      |"https://source.developers.google.com/p/gcp-cac-solution-build/r/cac_policies"|
@@ -55,7 +56,9 @@ REGULAR_USERS_LIST="  "
 # Format: 'ssc.gc.ca,domain2.ca'
 ALLOWED_DOMAINS="ssc.gc.ca,domain2.ca"
 DENY_DOMAINS="  "
-HAS_GUEST_USERS="False"
+HAS_GUEST_USERS="false"
+
+HAS_FEDERATED_USERS="true"
 
 # List of CIDR Blocks allowed to access the GCP environment
 # Format: '10.0.0.0/8,192.168.1.0/24'

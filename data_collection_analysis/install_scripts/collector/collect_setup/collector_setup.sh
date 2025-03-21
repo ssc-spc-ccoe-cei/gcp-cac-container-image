@@ -57,7 +57,7 @@ function config_init {
 
   ## Gathers required information for installation
   printf "$LANG_SETUP_PROMPT"
-  REQUIRED_VARIABLES=("PROJECT_ID" "SERVICE_ACCOUNT" "ORG_NAME" "GC_PROFILE" "SECURITY_CATEGORY_KEY" "PRIVILEGED_USERS_LIST" "REGULAR_USERS_LIST" "ALLOWED_DOMAINS" "DENY_DOMAINS" "HAS_GUEST_USERS" "ALLOWED_IPS" "CUSTOMER_IDS" "CA_ISSUERS" "ORG_ADMIN_GROUP_EMAIL" "BREAKGLASS_USER_EMAIL" "SSC_BUCKET_NAME" "POLICY_REPO" "OPA_IMAGE" "REGION")
+  REQUIRED_VARIABLES=("PROJECT_ID" "SERVICE_ACCOUNT" "ORG_NAME" "GC_PROFILE" "SECURITY_CATEGORY_KEY" "PRIVILEGED_USERS_LIST" "REGULAR_USERS_LIST" "ALLOWED_DOMAINS" "DENY_DOMAINS" "HAS_GUEST_USERS" "HAS_FEDERATED_USERS" "ALLOWED_IPS" "CUSTOMER_IDS" "CA_ISSUERS" "ORG_ADMIN_GROUP_EMAIL" "BREAKGLASS_USER_EMAIL" "SSC_BUCKET_NAME" "POLICY_REPO" "OPA_IMAGE" "REGION")
 
   for setting in "${REQUIRED_VARIABLES[@]}"; do
     if [ -z "${!setting}" ]; then
@@ -102,38 +102,38 @@ function service_account {
 }
 
 function storage_bucket {
-  cat <<EOF >object_lifecycle.json
-  {
-    "lifecycle": {
-      "rule": [
-        {
-          "action": {
-            "type": "Delete"
-          },
-          "condition": {
-            "age": 370,
-            "matchesPrefix": [
-              "guardrail-01/validations/05_APPROVAL",
-              "guardrail-02/validations/02_APPROVAL",
-              "guardrail-02/validations/03_APPROVAL",
-              "guardrail-02/validations/06_APPROVAL",
-              "guardrail-02/validations/09_APPROVAL",
-              "guardrail-02/validations/10_APPROVAL",
-              "guardrail-08/validations/01_APPROVAL",
-              "guardrail-08/validations/02_APPROVAL",
-              "guardrail-08/validations/03_APPROVAL",
-              "guardrail-10/validations/01_APPROVAL",
-              "guardrail-11/validations/06_APPROVAL",
-              "guardrail-12/validations/01_APPROVAL",
-              "guardrail-13/validations/01_APPROVAL",
-              "guardrail-13/validations/04_APPROVAL"
-            ]
-          }
-        }
-      ]
-    }
-  }
-EOF
+#   cat <<EOF >object_lifecycle.json
+#   {
+#     "lifecycle": {
+#       "rule": [
+#         {
+#           "action": {
+#             "type": "Delete"
+#           },
+#           "condition": {
+#             "age": 370,
+#             "matchesPrefix": [
+#               "guardrail-01/validations/05_APPROVAL",
+#               "guardrail-02/validations/02_APPROVAL",
+#               "guardrail-02/validations/03_APPROVAL",
+#               "guardrail-02/validations/06_APPROVAL",
+#               "guardrail-02/validations/09_APPROVAL",
+#               "guardrail-02/validations/10_APPROVAL",
+#               "guardrail-08/validations/01_APPROVAL",
+#               "guardrail-08/validations/02_APPROVAL",
+#               "guardrail-08/validations/03_APPROVAL",
+#               "guardrail-10/validations/01_APPROVAL",
+#               "guardrail-11/validations/06_APPROVAL",
+#               "guardrail-12/validations/01_APPROVAL",
+#               "guardrail-13/validations/01_APPROVAL",
+#               "guardrail-13/validations/04_APPROVAL"
+#             ]
+#           }
+#         }
+#       ]
+#     }
+#   }
+# EOF
   # Create the bucket
   gsutil ls -b gs://$BUCKET_NAME >>$LOG_FILE 2>&1
   ret=$?
@@ -165,8 +165,8 @@ EOF
       rm -rf guardrail-$(printf "%02d" $i)
     done
   fi
-  # Set up the object lifecycle policy for Approval Emails
-  gcloud storage buckets update gs://$BUCKET_NAME --lifecycle-file=object_lifecycle.json
+  # # Set up the object lifecycle policy for Approval Emails
+  # gcloud storage buckets update gs://$BUCKET_NAME --lifecycle-file=object_lifecycle.json
 
   # Set the IAM policy for the bucket
   API_ROLES=("legacyBucketReader" "objectViewer" "legacyBucketWriter")
