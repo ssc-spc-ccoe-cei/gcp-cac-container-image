@@ -187,7 +187,7 @@ EOF
   gcloud transfer jobs list --job-statuses=enabled | grep nightly_compliance_transfer >/dev/null 2>&1
   ret=$?
   if [ $ret -ne 0 ]; then
-    gcloud transfer jobs create gs://${BUCKET_NAME}/ ${SSC_BUCKET_NAME} \
+    gcloud transfer jobs create gs://${BUCKET_NAME}/ ${SSC_BUCKET_NAME}/${ORG_NAME} \
       --name "nightly_compliance_transfer_${ORDINAL}" \
       --include-modified-after-relative=1d \
       --schedule-starts=$(date -d "+1day" -u +"%Y-%m-%dT${RUN_HOUR}")
