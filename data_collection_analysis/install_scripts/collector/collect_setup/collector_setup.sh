@@ -295,6 +295,8 @@ function cloudrun_service {
                   value: "${HAS_GUEST_USERS}"
                 - name: GR02_10_HAS_GUEST_USERS
                   value: "${HAS_GUEST_USERS}"
+                - name: GR03_01_HAS_FEDERATED_USERS
+                  value: "${HAS_FEDERATED_USERS}"
                 - name: GR03_01_CUSTOMER_IDS
                   value: "${CUSTOMER_IDS}"
                 - name: GR03_01_ALLOWED_CIDRS

@@ -24,8 +24,9 @@ export REGULAR_USERS_LIST="user:jenn.charland@pwc.com"
 # Format: 'ssc.gc.ca,domain2.ca'
 export ALLOWED_DOMAINS="lab-rat.ca,pwc.com"
 export DENY_DOMAINS="gmail.com"
-export HAS_GUEST_USERS="False"
+export HAS_GUEST_USERS="false"
 
+export HAS_FEDERATED_USERS="true"
 # List of CIDR Blocks allowed to access the GCP environment
 # Format: 10.0.0.0/8,192.168.1.0/24
 export ALLOWED_CIDRS='10.0.0.0/8,192.168.1.0/24'
