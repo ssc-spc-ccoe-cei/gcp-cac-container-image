@@ -143,7 +143,7 @@ These results will be aggregated daily into a BigQuery Data set that can be visu
           "description":"Raw Data from Compliance Testing",
           "schema":{
             "fields":[
-              {"name":"tenant_domain","type":"string"},{"name":"organization","type":"string"},{"name":"status","type":"string"},{"name":"profile_level","type":"INT64"},{"name":"description","type":"string"},{"name":"asset_name","type":"string"},{"name":"msg","type":"string"},{"name":"organization_id","type":"INT64"},{"name":"guardrail","type":"INT64"},{"name":"validation","type":"string"},{"name":"check_type","type":"string"},{"name":"timestamp","type":"DATE"}]
+              {"name":"tenant_domain","type":"string"},{"name":"organization","type":"string"},{"name":"status","type":"string"},{"name":"profile_level","type":"INT64"},{"name":"description","type":"string"},{"name":"asset_name","type":"string"},{"name":"msg","type":"string"},{"name":"organization_id","type":"INT64"},{"name":"guardrail","type":"INT64"},{"name":"validation","type":"string"},{"name":"check_type","type":"string"},{"name":"timestamp","type":"DATE"},{"name":"proj_parent","type":"string"},{"name":"proj_profile","type":"INT64"}]
           },
           "tableReference":{
             "datasetId":"'"$DATASET_ID"'",
