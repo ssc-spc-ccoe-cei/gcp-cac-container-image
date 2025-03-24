@@ -6,6 +6,7 @@ from google.protobuf.json_format import MessageToDict
 import google.cloud.securitycenter as securitycenter
 import google.cloud.logging
 import google.cloud.storage as storage
+from google.api_core.exceptions import NotFound
 import google.auth
 from googleapiclient.discovery import build
 import concurrent.futures
@@ -165,6 +166,26 @@ def extract_issuer(cert):
 
     return issuer_org
 
+
+def gcs_blob_delete(project_id, bucket_name, blob_list):
+    """Delete blobs from GCS bucket
+    Args:
+        project_id: GCP project ID
+        bucket_name: Name of GCS bucket (do NOT need to prefix with gs://)
+        blob_list: Comma-separated list of file names
+
+    Returns:
+        None
+    """
+    storage_client = storage.Client(credentials=credentials, project=project_id)
+    bucket = storage_client.bucket(bucket_name)
+
+    for blob_name in blob_list:
+        try:
+            blob = bucket.blob(blob_name)
+            blob.delete()
+        except NotFound:
+            logger.info(f"Blob {blob_name} not found in bucket {bucket_name}")
 
 
 #----------------------------------------
@@ -654,6 +675,9 @@ def upload_json():
     duration_td = timedelta(seconds=overall_end_time - overall_start_time)
     logger.info(f"Time taken to execute operation: {duration_td}")
 
+    # Cleanup
+    blob_list = ["temp_ACCESS_POLICY.ndjson", "temp_IAM_POLICY.ndjson", "temp_RESOURCE.ndjson"]
+    gcs_blob_delete(project_id, bucket_name, blob_list)
 
     time.sleep(5)
     # Evaluate compiled data
