@@ -21,7 +21,6 @@ import os
 import logging
 import time
 import re
-import pytz
 from datetime import datetime, timedelta, timezone
 from cryptography import x509
 
@@ -404,7 +403,7 @@ def user_auth_ip_export(hours):
         A list of authentication log entries (if any)
     """
     auth_log_client = google.cloud.logging.Client(project=project_id)
-    now = datetime.now(tz=pytz.utc)
+    now = datetime.now(timezone.utc)
     time_hours_ago = now - timedelta(hours=hours)
     filter_str = f'timestamp >= "{time_hours_ago.isoformat()}" \
                    AND logName="projects/{project_id}/logs/cloudaudit.googleapis.com%2Factivity" \
@@ -538,7 +537,7 @@ def breakglass_auth_export(days, breakglass_user_email):
         A list of authentication log entries (if any)
     """
     auth_log_client = google.cloud.logging.Client()
-    now = datetime.now(tz=pytz.utc)
+    now = datetime.now(timezone.utc)
     time_days_ago = now - timedelta(days=days)
     filter_str = f'timestamp >= "{time_days_ago.isoformat()}" \
                    AND logName="organizations/{org_id}/logs/cloudaudit.googleapis.com%2Factivity" \
