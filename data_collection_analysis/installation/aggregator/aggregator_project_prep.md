@@ -159,6 +159,7 @@ These results will be aggregated daily into a BigQuery Data set that can be visu
 
         gcloud config set project <AGGREGATE_PROJECT_ID>
         PROJECT_ID="$(gcloud config get-value project)"
+        SERVICE_ACCOUNT="$SERVICE_ACCOUNT_NAME@$PROJECT_ID.iam.gserviceaccount.com"
         BQ_JOB_NAME="nightly_guardrails_report"
         bq mk \
         --transfer_config \
@@ -166,7 +167,8 @@ These results will be aggregated daily into a BigQuery Data set that can be visu
         --data_source=google_cloud_storage \
         --target_dataset=$DATASET_ID \
         --display_name="${BQ_JOB_NAME}"\
-        --params='{"data_path_template": "'"gs://${BUCKET_NAME}/results-*.json"'","file_format": "JSON", "destination_table_name_template":"raw_compliance_results"}'
+        --service_account_name="${SERVICE_ACCOUNT}"\
+        --params='{"data_path_template": "'"gs://${BUCKET_NAME}/*/results-*.json"'","file_format": "JSON", "destination_table_name_template":"raw_compliance_results"}'
   
    Verify the BigQuery DataSet and Transfer service setup in the GCP Console
 
