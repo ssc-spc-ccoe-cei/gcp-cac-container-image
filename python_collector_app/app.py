@@ -674,10 +674,6 @@ def upload_json():
     duration_td = timedelta(seconds=overall_end_time - overall_start_time)
     logger.info(f"Time taken to execute operation: {duration_td}")
 
-    # Cleanup
-    blob_list = ["temp_ACCESS_POLICY.ndjson", "temp_IAM_POLICY.ndjson", "temp_RESOURCE.ndjson"]
-    gcs_blob_delete(project_id, bucket_name, blob_list)
-
     time.sleep(5)
     # Evaluate compiled data
     response = requests.post("http://localhost:8181/v1/data/main/guardrail", json=compiled_data)
@@ -697,6 +693,11 @@ def upload_json():
         logger.info("CaC Evaluation Complete")
     else:
         logger.error(f"OPA Evaluation failed: {response.status_code}")
+
+    # Cleanup
+    logger.info("Cleaning up temp files from GCS bucket")
+    blob_list = ["temp_ACCESS_POLICY.ndjson", "temp_IAM_POLICY.ndjson", "temp_RESOURCE.ndjson"]
+    gcs_blob_delete(project_id, bucket_name, blob_list)
 
     # overall_end_time = time.time()
     # duration_td = timedelta(seconds=overall_end_time - overall_start_time)
