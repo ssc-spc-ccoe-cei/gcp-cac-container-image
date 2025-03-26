@@ -72,6 +72,7 @@ customer_id_parent = f"customers/{customer_id}"
 days_back_admin = 90
 hours_back_cloudaudit = 6
 f_name = f"results-{org_name}.json"
+ndf_name = f"results-{org_name}.ndjson"
 timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
 gcs_folders = [
@@ -185,6 +186,34 @@ def gcs_blob_delete(project_id, bucket_name, blob_list):
             blob.delete()
         except NotFound:
             logger.info(f"Blob {blob_name} not found in bucket {bucket_name}")
+
+
+def json_to_ndjson(json_data, output_file=None):
+    """Converts a JSON input file of JSON objects to NDJSON format.
+
+    Args:
+        json_data: A JSON object (dict) or a list of JSON objects.
+        output_file: (Optional) The path to the output NDJSON file. If None,
+                     the NDJSON string is returned.
+
+    Returns:
+        If output_file is None, returns the NDJSON string. Otherwise, returns None (and creates output file)
+    """
+    if isinstance(json_data, list):
+        ndjson_lines = [json.dumps(item) for item in json_data]
+    elif isinstance(json_data, dict):
+        ndjson_lines = [json.dumps(json_data)]
+    else:
+        raise ValueError("Input must be a JSON object (dict) or a list of JSON objects.")
+
+    ndjson_string = "\n".join(ndjson_lines)
+
+    if output_file:
+        with open(output_file, "w") as f:
+            f.write(ndjson_string)
+        return None
+    else:
+        return ndjson_string
 
 
 #----------------------------------------
@@ -314,6 +343,9 @@ def gcs_export(gcs_folders, gcs_folder_objects, bucket_name):
 # Essential Contacts export
 def essentialcontacts_export(asset_parent):
     """Get Essential Contacts
+    Google API doc:
+        https://cloud.google.com/resource-manager/docs/reference/essentialcontacts/rest/v1/organizations.contacts/list
+
     Args:
         asset_parent: org ID
 
@@ -336,6 +368,9 @@ def essentialcontacts_export(asset_parent):
 # Workspace export
 def workspace_users_export(ws_domain):
     """Get Google Workspace users
+    Google API doc:
+        https://developers.google.com/workspace/admin/directory/reference/rest/v1/users/list
+
     Args:
         ws_domain: Workspace domain (if any) 
 
@@ -430,6 +465,10 @@ def user_auth_ip_export(hours):
 # Org Admin Group member export
 def org_admin_group_member_export(customer_id_parent, ws_domain, org_admin_group_email):
     """Get Org Admin group member data
+    Google API docs:
+        https://cloud.google.com/identity/docs/reference/rest/v1/groups/list
+        https://cloud.google.com/identity/docs/reference/rest/v1/groups.memberships/list
+
     Args:
         customer_id_parent: customer ID
         ws_domain: Workspace domain
@@ -461,7 +500,7 @@ def org_admin_group_member_export(customer_id_parent, ws_domain, org_admin_group
             member_list.append(user)
         # compiling final output JSON
         org_admin_member_list = []
-        org_admin_member_list.append({"kind": "cloudidentity#groups#membership", "groupName": group_name, "groupEmail": f"gcp-organization-admins@{ws_domain}", "members": member_list})
+        org_admin_member_list.append({"kind": "cloudidentity#groups#membership", "groupName": group_name, "groupEmail": org_admin_group_email, "members": member_list})
     except KeyError:
         logger.error(f"Please validate permissions. KeyError encountered listing group membership for group: {group}")
         return json.dumps([])
@@ -485,6 +524,9 @@ def org_resource_tag_value_export(customer_id_parent, tag_key_list):
     """
     logger.info("Compiling Org Resource Direct Tagging Data")
     asset_client = asset_v1.AssetServiceClient(credentials=credentials)
+    excluded_assets = [
+        "cloudresourcemanager.googleapis.com/Project",
+    ]
     tagged_resources_list = []
     for tag_key in tag_key_list:
         # querying for tagKeys for finding directly attached ONLY
@@ -506,6 +548,9 @@ def org_resource_tag_value_export(customer_id_parent, tag_key_list):
 # Certificate Manager Cert Issuer export - applies only to Direct Tags
 def certmanager_export(certmanager_resource_id):
     """Get Certs data
+    Google API docs:
+        https://cloud.google.com/certificate-manager/docs/reference/certificate-manager/rest/v1/projects.locations.certificates/list
+
     Args:
         certmanager_resource_id: project and location of the certificate
 
@@ -692,7 +737,9 @@ def upload_json():
             filtered_json_objects, indent=1, separators=(',', ': '))
         beautified_filtered_json_objects = json.loads(
             beautified_filtered_json_objects)
+        ndjson_formatted_objects = json_to_ndjson(beautified_filtered_json_objects)
         upload_json_to_gcs(bucket_name, beautified_filtered_json_objects, f_name)
+        upload_json_to_gcs(bucket_name, ndjson_formatted_objects, ndf_name)
         logger.info("CaC Evaluation Complete")
     else:
         logger.error(f"OPA Evaluation failed: {response.status_code}")
