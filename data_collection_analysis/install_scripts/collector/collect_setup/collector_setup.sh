@@ -11,7 +11,6 @@ CLOUD_RUN="compliance-analysis"
 LOG_FILE="deployment-setup.log"
 # Set cloud scheduler job interval
 SCHEDULE="0 0 * * *"
-BRANCH="master"
 LOG_LEVEL="INFO"
 DATE=$(date)
 function clean_up {

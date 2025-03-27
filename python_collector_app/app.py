@@ -357,6 +357,12 @@ def gcs_export(gcs_folders, gcs_folder_objects, bucket_name):
         blobs = client.list_blobs(bucket_name, prefix=f"{folder_name}/")
         files = [blob.name for blob in blobs]
         gcs_folder_objects.append({"name": folder_name, "files": files})
+    try:
+        approval_file_list = client.list_blobs(bucket_name, prefix="GUARDRAIL_APPROVAL")
+        files = [blob.name for blob in approval_file_list]
+        gcs_folder_objects.append({"name": "root", "files": files})
+    except NotFound:
+        logger.info("Evidence approval file not found")
     return json.dumps(gcs_folder_objects, separators=(',', ':'))
 
 # Essential Contacts export
