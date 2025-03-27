@@ -476,7 +476,7 @@ def user_auth_ip_export(hours):
             # excluding cloudshell, gsa and internal auths
             if 'environment/devshell' not in caller_user_agent and not principal_email.endswith('iam.gserviceaccount.com') and source_ip != 'private':
                 # insertId can be used to find specific log entry
-                user_auth_logs_list.append({"kind": "logging#user#auth", "insertId": entry.insert_id, "principalEmail": principal_email, "sourceIp": source_ip, "timestamp": entry.timestamp.isoformat()})
+                user_auth_logs_list.append({"kind": "logging#user#auth", "logName": entry.log_name, "insertId": entry.insert_id, "principalEmail": principal_email, "sourceIp": source_ip, "timestamp": entry.timestamp.isoformat()})
     except KeyError:
         pass
     return json.dumps(user_auth_logs_list, separators=(',', ':'))
@@ -714,7 +714,7 @@ def upload_json():
     ]
 
     # Step 2: SCC export
-    logger.info("Step 2 of 13 - SSC export")
+    logger.info("Step 2 of 13 - SCC export")
     scc_data = json.loads(scc_export(scc_logs, scc_parent))
     upload_tasks.append((scc_data, "data/scc.json"))
 
