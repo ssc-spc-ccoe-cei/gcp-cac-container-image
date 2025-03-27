@@ -216,6 +216,25 @@ def json_to_ndjson(json_data, output_file=None):
         return ndjson_string
 
 
+def upload_file_to_gcs(bucket_name, file_name):
+    """Uploads a file to a GCS bucket.
+    Args:
+        bucket_name: Name of the GCS bucket.
+        file_name: Name of the file to upload.
+        
+    Returns:
+        None
+    """ 
+    try:
+        client = storage.Client(credentials=credentials, project=project_id)
+        bucket = client.bucket(bucket_name)
+        blob = bucket.blob(file_name)
+        blob.upload_from_filename(file_name)
+        logger.info(f"Uploaded {file_name} to Cloud Storage")
+    except Exception as e:
+        logger.error(f"Error uploading {file_name}: {e}")
+
+
 #----------------------------------------
 # DATA EXPORT FUNCTIONS
 #----------------------------------------
@@ -517,7 +536,7 @@ def org_resource_tag_value_export(customer_id_parent, tag_key_list):
     """Get assets with Tags
     Args:
         customer_id_parent: customer ID
-        tag_key_list: List of tag keys to filter for
+        take_key_list: List of tag keys to filter for
 
     Returns:
         List of assets tagged with provided tag keys
@@ -525,7 +544,46 @@ def org_resource_tag_value_export(customer_id_parent, tag_key_list):
     logger.info("Compiling Org Resource Direct Tagging Data")
     asset_client = asset_v1.AssetServiceClient(credentials=credentials)
     excluded_assets = [
-        "cloudresourcemanager.googleapis.com/Project",
+        "cloudresourcemanager.googleapis.com/Organization",
+	    "cloudresourcemanager.googleapis.com/Folder",
+    	"cloudresourcemanager.googleapis.com/Project",
+    	"cloudresourcemanager.googleapis.com/TagBinding",
+        "cloudresourcemanager.googleapis.com/TagKey",
+    	"cloudresourcemanager.googleapis.com/TagValue",
+    	"orgpolicy.googleapis.com/Policy",
+    	"compute.googleapis.com/Firewall",
+    	"compute.googleapis.com/FirewallPolicy",
+    	"compute.googleapis.com/Route",
+    	"compute.googleapis.com/Network",
+    	"compute.googleapis.com/Subnetwork",
+    	"compute.googleapis.com/Project",
+    	"compute.googleapis.com/GlobalAddress",
+    	"compute.googleapis.com/GlobalForwardingRule",
+    	"cloudkms.googleapis.com/CryptoKey",
+    	"cloudkms.googleapis.com/KeyRing",
+    	"cloudkms.googleapis.com/CryptoKeyVersion",
+    	"serviceusage.googleapis.com/Service",
+    	"secretmanager.googleapis.com/SecretVersion",
+    	"secretmanager.googleapis.com/Secret",
+    	"logging.googleapis.com/LogSink",
+    	"monitoring.googleapis.com/AlertPolicy",
+    	"pubsub.googleapis.com/Topic",
+    	"cloudbilling.googleapis.com/ProjectBillingInfo",
+    	"cloudbilling.googleapis.com/BillingAccount",
+    	"iam.googleapis.com/ServiceAccount",
+    	"binaryauthorization.googleapis.com/Attestor",
+    	"binaryauthorization.googleapis.com/Policy",
+    	"artifactregistry.googleapis.com/DockerImage",
+    	"bigquery.googleapis.com/Table",
+    	"cloudasset.googleapis.com/Feed",
+    	"dataplex.googleapis.com/EntryGroup",
+    	"essentialcontacts.googleapis.com/Contact",
+    	"logging.googleapis.com/Settings",
+    	"monitoring.googleapis.com/NotificationChannel",
+    	"securitycenter.googleapis.com/ContainerThreatDetectionSettings",
+    	"securitycenter.googleapis.com/MuteConfig",
+    	"securitycentermanagement.googleapis.com/SecurityCenterService",
+    	"storagetransfer.googleapis.com/TransferJob",
     ]
     tagged_resources_list = []
     for tag_key in tag_key_list:
@@ -534,15 +592,16 @@ def org_resource_tag_value_export(customer_id_parent, tag_key_list):
         request = asset_v1.SearchAllResourcesRequest(scope=customer_id_parent, query=f"effectiveTagKeys:{tag_key}")
         page_result = asset_client.search_all_resources(request=request)
         for response in page_result:
-            for i in range(len(response.tags)):
-                if response.tags[i].tag_key.endswith(tag_key):
-                    tagged_object = {"kind": "cloudresourcemanager#tagged#asset", "name": response.name, "parent": response.parent_full_resource_name, "asset_type": response.asset_type, "display_name": response.display_name, "location": response.location, "tag_key": response.tags[i].tag_key, "tag_value": response.tags[i].tag_value}
-                    if tagged_object not in tagged_resources_list:
-                        tagged_resources_list.append(tagged_object)
+            if response.asset_type not in excluded_assets:
+                for i in range(len(response.tags)):
+                    if response.tags[i].tag_key.endswith(tag_key):
+                        tagged_object = {"kind": "cloudresourcemanager#tagged#asset", "name": response.name, "parent": response.parent_full_resource_name, "asset_type": response.asset_type, "display_name": response.display_name, "location": response.location, "tag_key": response.tags[i].tag_key, "tag_value": response.tags[i].tag_value}
+                        if tagged_object not in tagged_resources_list:
+                            tagged_resources_list.append(tagged_object)
+                        else:
+                            pass
                     else:
                         pass
-                else:
-                    pass
     return json.dumps(tagged_resources_list, separators=(',', ':'))
 
 # Certificate Manager Cert Issuer export - applies only to Direct Tags
@@ -737,9 +796,14 @@ def upload_json():
             filtered_json_objects, indent=1, separators=(',', ': '))
         beautified_filtered_json_objects = json.loads(
             beautified_filtered_json_objects)
-        ndjson_formatted_objects = json_to_ndjson(beautified_filtered_json_objects)
         upload_json_to_gcs(bucket_name, beautified_filtered_json_objects, f_name)
-        upload_json_to_gcs(bucket_name, ndjson_formatted_objects, ndf_name)
+
+        # creates an additional output file in .ndjson format (Newline Delimited JSON)
+        # uploads to GCS bucket at the root
+        # this file is for ingesting into BigQuery
+        json_to_ndjson(beautified_filtered_json_objects, ndf_name)
+        upload_file_to_gcs(bucket_name, ndf_name)
+
         logger.info("CaC Evaluation Complete")
     else:
         logger.error(f"OPA Evaluation failed: {response.status_code}")

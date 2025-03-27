@@ -143,7 +143,7 @@ These results will be aggregated daily into a BigQuery Data set that can be visu
           "description":"Raw Data from Compliance Testing",
           "schema":{
             "fields":[
-              {"name":"tenant_domain","type":"string"},{"name":"organization","type":"string"},{"name":"status","type":"string"},{"name":"profile_level","type":"INT64"},{"name":"description","type":"string"},{"name":"asset_name","type":"string"},{"name":"msg","type":"string"},{"name":"organization_id","type":"INT64"},{"name":"guardrail","type":"INT64"},{"name":"validation","type":"string"},{"name":"check_type","type":"string"},{"name":"timestamp","type":"DATE"},{"name":"proj_parent","type":"string"},{"name":"proj_profile","type":"INT64"}]
+              {"name":"tenant_domain","type":"STRING"},{"name":"organization","type":"STRING"},{"name":"status","type":"STRING"},{"name":"profile_level","type":"INT64"},{"name":"description","type":"STRING"},{"name":"asset_name","type":"STRING"},{"name":"msg","type":"STRING"},{"name":"organization_id","type":"INT64"},{"name":"guardrail","type":"INT64"},{"name":"validation","type":"STRING"},{"name":"check_type","type":"STRING"},{"name":"timestamp","type":"DATE"},{"name":"proj_parent","type":"STRING"},{"name":"proj_profile","type":"INT64"}]
           },
           "tableReference":{
             "datasetId":"'"$DATASET_ID"'",
@@ -168,7 +168,7 @@ These results will be aggregated daily into a BigQuery Data set that can be visu
         --target_dataset=$DATASET_ID \
         --display_name="${BQ_JOB_NAME}"\
         --service_account_name="${SERVICE_ACCOUNT}"\
-        --params='{"data_path_template": "'"gs://${BUCKET_NAME}/*/results-*.json"'","file_format": "JSON", "destination_table_name_template":"raw_compliance_results"}'
+        --params='{"data_path_template": "'"gs://${BUCKET_NAME}/*/results-*.ndjson"'","file_format": "JSON", "destination_table_name_template":"raw_compliance_results"}'
   
    Verify the BigQuery DataSet and Transfer service setup in the GCP Console
 
