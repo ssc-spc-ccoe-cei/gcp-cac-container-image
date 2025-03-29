@@ -62,7 +62,7 @@ export CA_ISSUERS="Let's Encrypt,Verisign"
 # GR11.4
 export ORG_ID="37505682288"
 
-#GR 13.3
+#GR13.2 & GR13.3
 # breakglass user email
 export BREAKGLASS_USER_EMAIL="breakglass-account@ssc.gc.ca"
 

@@ -304,6 +304,8 @@ function cloudrun_service {
                   value: "${SECURITY_CATEGORY_KEY}"
                 - name: GR07_03_ALLOWED_CA_ISSUERS
                   value: "${CA_ISSUERS}"
+                - name: GR13_02_BREAKGLASS_USER_EMAIL
+                  value: "${BREAKGLASS_USER_EMAIL}"
                 - name: GR13_03_BREAKGLASS_USER_EMAIL
                   value: "${BREAKGLASS_USER_EMAIL}"
                 resources:
