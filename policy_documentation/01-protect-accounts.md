@@ -91,7 +91,7 @@ For users of Google Workspace, default built-in safety features help meet this r
 
 As the Alert Center API is currently v1beta1 and does not have the capability to query for Reporting Rules or its details, screenshot evidence of custom rules that have been created to enforce validation requirements.
 
-**COMPLIANT** if document(s) uploaded to `guardrail-01` folder AND it has been reviewed and received approval. Approval is to be uploaded to `guardrail-01/validations` and filename must begin with *05_APPROVAL* (i.e. `05_APPROVAL_email.pdf`)
+**COMPLIANT** if document(s) uploaded to `guardrail-01` folder AND it has been reviewed and received approval. Approval is to be uploaded to the root of the Google Cloud Storage bucket and filename must begin with *GUARDRAIL_APPROVAL* (i.e. `GUARDRAIL_APPROVAL_email.pdf`)
 
 **PENDING** status if document(s) have been uploaded/provided but approval have not been given.
 

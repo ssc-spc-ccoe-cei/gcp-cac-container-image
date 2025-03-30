@@ -25,7 +25,7 @@ Target network architecture design/diagram to be uploaded/provided for review & 
 - [ITSP.80.022](https://www.cyber.gc.ca/en/guidance/baseline-security-requirements-network-security-zones-version-20-itsp80022)
 - [ITSG-38](https://www.cyber.gc.ca/en/guidance/network-security-zoning-design-considerations-placement-services-within-zones-itsg-38)
 
-**COMPLIANT** if document(s) uploaded to `guardrail-08` folder AND it has been reviewed and received approval. Approval is to be uploaded to `guardrail-08/validations` and filename must begin with *01_APPROVAL* (i.e. `01_APPROVAL_email.pdf`)
+**COMPLIANT** if document(s) uploaded to `guardrail-08` folder AND it has been reviewed and received approval. Approval is to be uploaded to the root of the Google Cloud Storage bucket and filename must begin with *GUARDRAIL_APPROVAL* (i.e. `GUARDRAIL_APPROVAL_email.pdf`)
 
 **PENDING** status if document(s) have been uploaded/provided but approval have not been given.
 
@@ -43,7 +43,7 @@ Validate department has deployment guide documented for GCP and associated servi
 
 Deployment guide to be uploaded/provided for review & approval.
 
-**COMPLIANT** if document(s) uploaded to `guardrail-08` folder AND it has been reviewed and received approval. Approval is to be uploaded to `guardrail-08/validations` and filename must begin with *02_APPROVAL* (i.e. `02_APPROVAL_email.pdf`)
+**COMPLIANT** if document(s) uploaded to `guardrail-08` folder AND it has been reviewed and received approval. Approval is to be uploaded to the root of the Google Cloud Storage bucket and filename must begin with *GUARDRAIL_APPROVAL* (i.e. `GUARDRAIL_APPROVAL_email.pdf`)
 
 **PENDING** status if document(s) have been uploaded/provided but approval have not been given.
 
@@ -63,7 +63,7 @@ Validate GCP's segmentation features are leveraged to provide segmentation of ma
 
 Ensure deployment guide is leveraging GCP's features to for project and environment segmentation.
 
-**COMPLIANT** if document(s) uploaded to `guardrail-08` folder AND it has been reviewed and received approval. Approval is to be uploaded to `guardrail-08/validations` and filename must begin with *03_APPROVAL* (i.e. `03_APPROVAL_email.pdf`)
+**COMPLIANT** if document(s) uploaded to `guardrail-08` folder AND it has been reviewed and received approval. Approval is to be uploaded to the root of the Google Cloud Storage bucket and filename must begin with *GUARDRAIL_APPROVAL* (i.e. `GUARDRAIL_APPROVAL_email.pdf`)
 
 **PENDING** status if document(s) have been uploaded/provided but approval have not been given.
 

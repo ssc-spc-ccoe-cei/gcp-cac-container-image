@@ -25,7 +25,7 @@ Ensure that an emergency account management procedure has been created.
 
 Document(s) containing emergency account management procedure required to be uploaded to attestation `guardrail-13` folder.
 
-**COMPLIANT** if document(s) uploaded to `guardrail-13` folder AND it has been reviewed and received approval. Approval is to be uploaded to `guardrail-13/validations` and filename must begin with *01_APPROVAL* (i.e. `01_APPROVAL_email.pdf`) 
+**COMPLIANT** if document(s) uploaded to `guardrail-13` folder AND it has been reviewed and received approval. Approval is to be uploaded to the root of the Google Cloud Storage bucket and filename must begin with *GUARDRAIL_APPROVAL* (i.e. `GUARDRAIL_APPROVAL_email.pdf`)
 
 **PENDING** status if document(s) have been uploaded/provided but approval have not been given.
 
@@ -79,7 +79,7 @@ Document(s) containing emergency account management procedure required to be upl
 
 Document(s) must be reviewed and approval needs to be provided by CIO.
 
-**COMPLIANT** if document(s) uploaded to `guardrail-13` folder AND it has been reviewed and received approval. Approval is to be uploaded to `guardrail-13/validations` and filename must begin with *04_APPROVAL* (i.e. `04_APPROVAL_email.pdf`) 
+**COMPLIANT** if document(s) uploaded to `guardrail-13` folder AND it has been reviewed and received approval. Approval is to be uploaded to the root of the Google Cloud Storage bucket and filename must begin with *GUARDRAIL_APPROVAL* (i.e. `GUARDRAIL_APPROVAL_email.pdf`)
 
 **PENDING** status if document(s) have been uploaded/provided but approval have not been given.
 

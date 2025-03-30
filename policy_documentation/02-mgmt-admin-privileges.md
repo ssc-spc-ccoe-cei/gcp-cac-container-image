@@ -71,7 +71,10 @@ Supporting documents must be provided to attest for the following to confirm tha
 - disable default & dormant accounts
 - avoid using of user generic accounts
 
-**COMPLIANT** if document(s) uploaded to `guardrail-02` folder AND it has been reviewed and received approval. Approval is to be uploaded to `guardrail-02/validations` and filename must begin with *02_APPROVAL* (i.e. `02_APPROVAL_email.pdf`)
+
+**COMPLIANT** if document(s) uploaded to `guardrail-02` folder AND it has been reviewed and received approval. Approval is to be uploaded to the root of the Google Cloud Storage bucket and filename must begin with *GUARDRAIL_APPROVAL* (i.e. `GUARDRAIL_APPROVAL_email.pdf`)
+
+*NOTE*: there is currently no single place which has all the information/evidence required for this validation and hence it has been determined that the minimum number of documents/screenshots required to provide the evidence is THREE (3).  Should this change in future iterations, please adjust the policy accordingly.
 
 **PENDING** status if document(s) have been uploaded/provided but approval have not been given.
 
@@ -89,7 +92,7 @@ Validate role assignment reviews for global admin accounts (organization admins)
 
 Document(s) to provide proof that role assignment reviews need to be uploaded for review/validation.
 
-**COMPLIANT** if document(s) uploaded to `guardrail-02` folder AND it has been reviewed and received approval. Approval is to be uploaded to `guardrail-02/validations` and filename must begin with *03_APPROVAL* (i.e. `03_APPROVAL_email.pdf`)
+**COMPLIANT** if document(s) uploaded to `guardrail-02` folder AND it has been reviewed and received approval. Approval is to be uploaded to the root of the Google Cloud Storage bucket and filename must begin with *GUARDRAIL_APPROVAL* (i.e. `GUARDRAIL_APPROVAL_email.pdf`)
 
 **PENDING** status if document(s) have been uploaded/provided but approval have not been given.
 
@@ -131,7 +134,7 @@ Validate password policies have been configured.
   
 Screenshot of configured Password Management options as evidence for attestation must be uploaded/provided to GCS bucket for review/approval.
 
-**COMPLIANT** if document(s) uploaded to `guardrail-02` folder AND it has been reviewed and received approval. Approval is to be uploaded to `guardrail-02/validations` and filename must begin with *06_APPROVAL* (i.e. `06_APPROVAL_email.pdf`)
+**COMPLIANT** if document(s) uploaded to `guardrail-02` folder AND it has been reviewed and received approval. Approval is to be uploaded to the root of the Google Cloud Storage bucket and filename must begin with *GUARDRAIL_APPROVAL* (i.e. `GUARDRAIL_APPROVAL_email.pdf`)
 
 **PENDING** status if document(s) have been uploaded/provided but approval have not been given.
 
@@ -189,7 +192,7 @@ Client must provide a list of guest users (if any)
 
 **COMPLIANT** if no guest accounts are being used
 
-**COMPLIANT** if document(s) uploaded to `guardrail-02` folder AND it has been reviewed and received approval. Approval is to be uploaded to `guardrail-02/validations` and filename must begin with *09_APPROVAL* (i.e. `09_APPROVAL_email.pdf`)
+**COMPLIANT** if document(s) uploaded to `guardrail-02` folder AND it has been reviewed and received approval. Approval is to be uploaded to the root of the Google Cloud Storage bucket and filename must begin with *GUARDRAIL_APPROVAL* (i.e. `GUARDRAIL_APPROVAL_email.pdf`)
 
 **PENDING** status if document(s) have been uploaded/provided but approval have not been given.
 
@@ -207,7 +210,7 @@ Validate reviews of guest access are performed periodically.
 
 Attestation for review performed is required to be uploaded/provided to GCS bucket for review/approval.
 
-**COMPLIANT** if document(s) uploaded to `guardrail-02` folder AND it has been reviewed and received approval. Approval is to be uploaded to `guardrail-02/validations` and filename must begin with *10_APPROVAL* (i.e. `10_APPROVAL_email.pdf`)
+**COMPLIANT** if document(s) uploaded to `guardrail-02` folder AND it has been reviewed and received approval. Approval is to be uploaded to the root of the Google Cloud Storage bucket and filename must begin with *GUARDRAIL_APPROVAL* (i.e. `GUARDRAIL_APPROVAL_email.pdf`)
 
 **PENDING** status if document(s) have been uploaded/provided but approval have not been given.
 

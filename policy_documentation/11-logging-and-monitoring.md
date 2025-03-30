@@ -94,7 +94,7 @@ Document(s) containing monitoring use cases have been uploaded to attestation `g
 
 Document(s) must be reviewed and approved.
 
-**COMPLIANT** if document(s) uploaded to `guardrail-11` folder AND it has been reviewed and received approval. Approval is to be uploaded to `guardrail-11/validations` and filename must begin with *06_APPROVAL* (i.e. `06_APPROVAL_email.pdf`)
+**COMPLIANT** if document(s) uploaded to `guardrail-11` folder AND it has been reviewed and received approval. Approval is to be uploaded to the root of the Google Cloud Storage bucket and filename must begin with *GUARDRAIL_APPROVAL* (i.e. `GUARDRAIL_APPROVAL_email.pdf`)
 
 **PENDING** status if document(s) have been uploaded/provided but approval have not been given.
 

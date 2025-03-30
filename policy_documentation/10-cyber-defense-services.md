@@ -21,7 +21,7 @@ Ensure that the memorandum of understanding (MOU) has been signed.
 
 Signed MOU is to be uploaded to attestation `guardrail-10` folder.
 
-**COMPLIANT** if MOU uploaded to `guardrail-10` folder AND it has been reviewed and received approval. Approval is to be uploaded to `guardrail-10/validations` and filename must begin with *01_APPROVAL* (i.e. `01_APPROVAL_email.pdf`)
+**COMPLIANT** if MOU uploaded to `guardrail-10` folder AND it has been reviewed and received approval. Approval is to be uploaded to the root of the Google Cloud Storage bucket and filename must begin with *GUARDRAIL_APPROVAL* (i.e. `GUARDRAIL_APPROVAL_email.pdf`)
 
 **PENDING** status if MOU has been uploaded/provided but approval have not been given.
 
