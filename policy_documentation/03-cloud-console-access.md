@@ -43,6 +43,8 @@ Validate that access to cloud environment is from approved and trusted locations
 
 Client is to provide a list of allowed IPs.  These values are checked against authentication source IPs in the last 24 hours
   
+**COMPLIANT** if users are federated (i.e. `HAS_FEDERATED_USERS = true`). In this scenario, the guardrail/validation conditions is behing handled by the IdP (Azure AD)
+
 **COMPLIANT** if provided IPs match authentication source IPs 
 
 **NON-COMPLIANT** if there are discrepancies between provided IP list and authentication source IPs.
