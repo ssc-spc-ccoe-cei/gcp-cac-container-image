@@ -60,9 +60,9 @@ content_type_list = ["RESOURCE", "ACCESS_POLICY", "IAM_POLICY"]
 
 # PROFILE is the Profile level i.e. "Profile 1", "Profile 2", etc.
 # DATA_CLASSIFICATION is "Unclassified", "Protected A", etc
-tag_key_list = ["PROFILE", "profile", "DATA_CLASSIFICATION", "data_classification"]
+tag_key_list = ["PROJECT_PROFILE", "DATA_CLASSIFICATION"]
 
-project_profile_tag_key_list = ["PROJECT_PROFILE", "project_profile"]
+project_profile_tag_key_list = ["PROJECT_PROFILE"]
 
 lock = threading.Lock()
 scc_parent = f"organizations/{org_id}/sources/-"
@@ -601,7 +601,7 @@ def org_resource_tag_value_export(customer_id_parent, tag_key_list):
             if response.asset_type not in excluded_assets:
                 for i in range(len(response.tags)):
                     if response.tags[i].tag_key.endswith(tag_key):
-                        tagged_object = {"kind": "cloudresourcemanager#tagged#asset", "name": response.name, "parent": response.parent_full_resource_name, "asset_type": response.asset_type, "display_name": response.display_name, "location": response.location, "tag_key": response.tags[i].tag_key, "tag_value": response.tags[i].tag_value}
+                        tagged_object = {"kind": "cloudresourcemanager#tagged#asset", "name": response.name, "parent": response.parent_full_resource_name, "project_number": response.project, "asset_type": response.asset_type, "display_name": response.display_name, "location": response.location, "tag_key": response.tags[i].tag_key, "tag_value": response.tags[i].tag_value}
                         if tagged_object not in tagged_resources_list:
                             tagged_resources_list.append(tagged_object)
                         else:
@@ -695,7 +695,7 @@ def org_project_profile_tag_export(asset_parent, project_profile_tag_key_list):
             if response.asset_type in included_assets:
                 for i in range(len(response.tags)):
                     if response.tags[i].tag_key.endswith(tag_key):
-                        tagged_project = {"kind": "cloudresourcemanager#tagged#project", "name": response.name, "parent": response.parent_full_resource_name, "asset_type": response.asset_type, "display_name": response.display_name, "tag_key": response.tags[i].tag_key, "tag_value": response.tags[i].tag_value}
+                        tagged_project = {"kind": "cloudresourcemanager#tagged#project", "name": response.name, "parent": response.parent_full_resource_name, "project_number": response.project, "asset_type": response.asset_type, "display_name": response.display_name, "tag_key": response.tags[i].tag_key, "tag_value": response.tags[i].tag_value}
                         if tagged_project not in tagged_projects_list:
                             tagged_projects_list.append(tagged_project)
                         else:
