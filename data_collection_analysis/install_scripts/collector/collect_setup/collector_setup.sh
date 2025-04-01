@@ -1,8 +1,8 @@
 #!/bin/bash
 
-set -o errexit
+#set -o errexit
 set -o pipefail
-#TEST COMMENT FOR MANINDER
+
 ## declare an array of policies
 declare -a ROLES=("roles/iam.workloadIdentityUser" "roles/run.developer" "roles/iam.serviceAccountUser" "roles/storage.admin" "roles/cloudscheduler.admin" "roles/run.invoker" "roles/run.serviceAgent" "roles/cloudasset.viewer" "roles/logging.viewer" "roles/securitycenter.adminViewer")
 ROLE_COUNT=$(echo "${ROLES[@]}" | wc -w)
@@ -101,38 +101,6 @@ function service_account {
 }
 
 function storage_bucket {
-#   cat <<EOF >object_lifecycle.json
-#   {
-#     "lifecycle": {
-#       "rule": [
-#         {
-#           "action": {
-#             "type": "Delete"
-#           },
-#           "condition": {
-#             "age": 370,
-#             "matchesPrefix": [
-#               "guardrail-01/validations/05_APPROVAL",
-#               "guardrail-02/validations/02_APPROVAL",
-#               "guardrail-02/validations/03_APPROVAL",
-#               "guardrail-02/validations/06_APPROVAL",
-#               "guardrail-02/validations/09_APPROVAL",
-#               "guardrail-02/validations/10_APPROVAL",
-#               "guardrail-08/validations/01_APPROVAL",
-#               "guardrail-08/validations/02_APPROVAL",
-#               "guardrail-08/validations/03_APPROVAL",
-#               "guardrail-10/validations/01_APPROVAL",
-#               "guardrail-11/validations/06_APPROVAL",
-#               "guardrail-12/validations/01_APPROVAL",
-#               "guardrail-13/validations/01_APPROVAL",
-#               "guardrail-13/validations/04_APPROVAL"
-#             ]
-#           }
-#         }
-#       ]
-#     }
-#   }
-# EOF
   # Create the bucket
   gsutil ls -b gs://$BUCKET_NAME >>$LOG_FILE 2>&1
   ret=$?
@@ -164,8 +132,6 @@ function storage_bucket {
       rm -rf guardrail-$(printf "%02d" $i)
     done
   fi
-  # # Set up the object lifecycle policy for Approval Emails
-  # gcloud storage buckets update gs://$BUCKET_NAME --lifecycle-file=object_lifecycle.json
 
   # Set the IAM policy for the bucket
   API_ROLES=("legacyBucketReader" "objectViewer" "legacyBucketWriter")
@@ -270,7 +236,7 @@ function cloudrun_service {
                     cd /mnt/policies
                     git checkout ${BRANCH}
                     ls -l /mnt/policies
-                    /usr/bin/opa run --server --addr :8181 --disable-telemetry /mnt/policies
+                    /usr/bin/opa run --server --addr :8181 --log-level debug --disable-telemetry /mnt/policies
                 env:
                 - name: GR11_04_ORG_ID
                   value: "${ORG_ID}"
