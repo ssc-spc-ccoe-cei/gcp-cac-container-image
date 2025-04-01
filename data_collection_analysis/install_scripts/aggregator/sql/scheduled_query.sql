@@ -7,7 +7,7 @@ SELECT DISTINCT
                 SELECT
                     COUNT(*)
                 FROM
-                    ``
+                    `<project_id>.<data_set>.multiprofile_output`
                 WHERE
                     profile_level = 1
                     AND status = 'NON-COMPLIANT'
@@ -20,7 +20,7 @@ SELECT DISTINCT
                 SELECT
                     COUNT(*)
                 FROM
-                    ``
+                    `<project_id>.<data_set>.multiprofile_output`
                 WHERE
                     profile_level = 2
                     AND status = 'NON-COMPLIANT'
@@ -33,7 +33,7 @@ SELECT DISTINCT
                 SELECT
                     COUNT(*)
                 FROM
-                    ``
+                    `<project_id>.<data_set>.multiprofile_output`
                 WHERE
                     profile_level >= 3
                     AND status = 'NON-COMPLIANT'
@@ -42,7 +42,7 @@ SELECT DISTINCT
         END
     END
 FROM
-    ``
+    `<project_name>.<data_set>.multiprofile_output`
 
 
 
