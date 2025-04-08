@@ -1,0 +1,87 @@
+###--------------------------------------
+# Python app.py deployment settings
+#----------------------------------------
+### Azure Tenant Domain (if any)
+export TENANT_DOMAIN="163cspmdev.onmicrosoft.com"
+### GCP Organization Information
+export PROJECT_ID="cacv2-devproj"
+# Organization Name
+export ORG_NAME="lab-rat.ca"
+# GC Cloud Usage Profile number
+export GC_PROFILE="1"
+export GCP_PROJECT="cacv2-devproj"
+
+
+###--------------------------------------
+# Python app.py deployment settings
+#----------------------------------------
+# GR1.3
+export ORG_ADMIN_GROUP_EMAIL="gcp-organization-admins@163gccspm.gccspm.gc.ca"
+
+# GR5.1
+# Tag Key used to identify security classification of GCP resources
+# example: a GCS bucket can be identified as containing Protected "A" data by tagging it
+# DATA_CLASSIFICATION: Protected A
+export SECURITY_CATEGORY_KEY="DATA_CLASSIFICATION"
+
+# GR1.6 & GR2.1
+# List of Privileged Users and their regular account names
+# Format: '(user:admin1@org.ca,user:admin2@org.ca,user:admin3@org.ca)'
+export PRIVILEGED_USERS_LIST="user:jenn@lab-rat.ca"
+export REGULAR_USERS_LIST="user:jenn.charland@pwc.com"
+
+# GR2.8
+# List of Domains that are allowed/denied to access the GCP environment
+# Format: 'ssc.gc.ca,domain2.ca'
+export ALLOWED_DOMAINS="lab-rat.ca,pwc.com"
+export DENY_DOMAINS="gmail.com"
+
+# GR2.9 & GR 2.10
+export HAS_GUEST_USERS="false"
+
+# GR3.1
+export HAS_FEDERATED_USERS="true"
+
+# GR3.1
+# List of CIDR Blocks allowed to access the GCP environment
+# Format: 10.0.7.44,192.168.0.16
+# NOTE: this can also be left blank if HAS_FEDERATED_USERS="true"
+export ALLOWED_IPS='10.0.7.44,192.168.0.16'
+
+# GR3.1
+# List of GCP Org and/or Workspace Customer IDs
+# run `gcloud organization list` to find yours
+# i.e. CUSTOMER_IDS='C03xxxx4x,Abc123,XYZ890'
+export CUSTOMER_IDS='C018hjxjn'
+
+# GR7.3
+# List of Acceptable Certifcate Authorities
+# Format: "Let's Encrypt,Verisign"
+export CA_ISSUERS="Let's Encrypt,Verisign"
+
+# GR11.4
+export ORG_ID="37505682288"
+
+#GR13.2 & GR13.3
+# breakglass user email
+export BREAKGLASS_USER_EMAIL="breakglass-account@ssc.gc.ca"
+
+
+
+###--------------------------------------
+# Core deployment settings
+#----------------------------------------
+# setting you likely will NOT need to change
+export REGION="northamerica-northeast1"
+export APP_PORT="8080"
+export BIN_AUTH_ENABLED="true"
+
+# you will very likely need to UPDATE these though
+export POLICY_REPO="cac_policies"
+export POLICY_PROJECT="cacv2-devproj"
+export BRANCH="main"
+export IMAGE_TAG="v2.0"
+export OPA_IMAGE="northamerica-northeast1-docker.pkg.dev/cacv2-devproj/opa/opa:0.70.0-googlesdk"
+export POLICY_VERSION="v2.0"
+export GCS_BUCKET="compliance-hub-705810609657"
+export SERVICE_ACCOUNT="cac-dev-37505682288-sa@cacv2-devproj.iam.gserviceaccount.com"

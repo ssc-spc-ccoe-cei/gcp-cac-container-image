@@ -1,0 +1,7 @@
+FROM gcr.io/google.com/cloudsdktool/cloud-sdk:509.0.0-alpine
+
+RUN curl -L -o /usr/bin/opa https://openpolicyagent.org/downloads/v0.70.0/opa_linux_amd64_static
+
+RUN chmod +x /usr/bin/opa
+
+CMD ["/bin/bash"]

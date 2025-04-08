@@ -1,0 +1,12 @@
+steps:
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['build', '-t', '${_REGION}-docker.pkg.dev/${_PROJECT_ID}/opa/opa:${_OPA_VERSION}-googlesdk', '-f', 'Dockerfile_custom_opa', '.']
+  dir: 'python_collector_app'
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['push', '${_REGION}-docker.pkg.dev/${_PROJECT_ID}/opa/opa:${_OPA_VERSION}-googlesdk']
+options:
+  automapSubstitutions: true
+  logging: CLOUD_LOGGING_ONLY
+substitutions:
+  _OPA_VERSION: 0.70.0
+  _REGION:  northamerica-northeast1
