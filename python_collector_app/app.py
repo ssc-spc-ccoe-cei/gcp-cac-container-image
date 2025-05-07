@@ -463,6 +463,7 @@ def user_auth_ip_export(hours):
     Returns:
         A list of authentication log entries (if any)
     """
+	
     auth_log_client = google.cloud.logging.Client(project=project_id)
     now = datetime.now(timezone.utc)
     time_hours_ago = now - timedelta(hours=hours)
@@ -473,7 +474,7 @@ def user_auth_ip_export(hours):
         -protoPayload.serviceName="iam.googleapis.com"
         -protoPayload.serviceName="k8s.io"
     '''
-
+    logger.info("Compiling GCP User Auth data")
     try:
         entries = auth_log_client.list_entries(filter_=filter_str)
     except Exception as e:
