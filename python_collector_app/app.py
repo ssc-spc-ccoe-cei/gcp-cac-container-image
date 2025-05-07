@@ -456,6 +456,7 @@ def acm_export(asset_parent):
 # Auth logs of users from Cloud Logging export
 def user_auth_ip_export(hours):
     """Retrieves project authentication logs in the last X hours
+
     Args:
         hours (int): number of hours to filter logs
 
@@ -465,26 +466,57 @@ def user_auth_ip_export(hours):
     auth_log_client = google.cloud.logging.Client(project=project_id)
     now = datetime.now(timezone.utc)
     time_hours_ago = now - timedelta(hours=hours)
-    filter_str = f'timestamp >= "{time_hours_ago.isoformat()}" \
-                   AND logName="projects/{project_id}/logs/cloudaudit.googleapis.com%2Factivity" \
-                   -protoPayload.serviceName="iam.googleapis.com" \
-                   -protoPayload.serviceName="k8s.io"'
+
+    filter_str = f'''
+        timestamp >= "{time_hours_ago.isoformat()}" 
+        AND logName="projects/{project_id}/logs/cloudaudit.googleapis.com%2Factivity"
+        -protoPayload.serviceName="iam.googleapis.com"
+        -protoPayload.serviceName="k8s.io"
+    '''
+
     try:
         entries = auth_log_client.list_entries(filter_=filter_str)
     except Exception as e:
         logger.error(f"Error retrieving logs from Cloud Logging: {e}")
+        return json.dumps([], separators=(',', ':'))
+
     user_auth_logs_list = []
-    try:
-        for entry in entries:
-            principal_email = entry.payload['authenticationInfo']['principalEmail']
-            source_ip = entry.payload['requestMetadata']['callerIp']
-            caller_user_agent = entry.payload['requestMetadata']['callerSuppliedUserAgent']
-            # excluding cloudshell, gsa and internal auths
-            if 'environment/devshell' not in caller_user_agent and not principal_email.endswith('iam.gserviceaccount.com') and source_ip != 'private':
-                # insertId can be used to find specific log entry
-                user_auth_logs_list.append({"kind": "logging#user#auth", "logName": entry.log_name, "insertId": entry.insert_id, "principalEmail": principal_email, "sourceIp": source_ip, "timestamp": entry.timestamp.isoformat()})
-    except KeyError:
-        pass
+
+    for entry in entries:
+        payload = entry.payload
+        if not isinstance(payload, dict):
+            continue
+
+        auth_info = payload.get('authenticationInfo')
+        request_metadata = payload.get('requestMetadata')
+
+        if not isinstance(auth_info, dict) or not isinstance(request_metadata, dict):
+            continue
+
+        principal_email = auth_info.get('principalEmail')
+        source_ip = request_metadata.get('callerIp')
+        caller_user_agent = request_metadata.get('callerSuppliedUserAgent')
+
+        if not all([principal_email, source_ip, caller_user_agent]):
+            continue
+
+        # Exclude internal/cloudshell/service accounts
+        if 'environment/devshell' in caller_user_agent:
+            continue
+        if principal_email.endswith('iam.gserviceaccount.com'):
+            continue
+        if source_ip == 'private':
+            continue
+
+        user_auth_logs_list.append({
+            "kind": "logging#user#auth",
+            "logName": entry.log_name,
+            "insertId": entry.insert_id,
+            "principalEmail": principal_email,
+            "sourceIp": source_ip,
+            "timestamp": entry.timestamp.isoformat()
+        })
+
     return json.dumps(user_auth_logs_list, separators=(',', ':'))
 
 # Org Admin Group member export
