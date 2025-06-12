@@ -43,6 +43,7 @@ tenant_domain = os.environ['TENANT_DOMAIN']
 policy_version = os.environ['POLICY_VERSION']
 app_version = os.environ['APP_VERSION']
 customer_id = os.environ['CUSTOMER_ID'] # your directory customer ID (`gcloud organizations list`)
+log_read_requests_per_min = int(os.environ.get("LOG_READ_REQUESTS_PER_MIN", 60))
 
 # your Workspace domain, if env var not provided,
 # it is implied you do not have a Workspace account, then use empty string '' as default
@@ -343,10 +344,16 @@ def logger_export(filter_str1, filter_str2, logger_resource_name):
     logger.info("Compiling Logging Data")
     client = google.cloud.logging.Client(credentials=credentials)
     logs = []
-    for entry in client.list_entries(filter_=filter_str1, resource_names=logger_resource_name):
+
+    # Calculate delay needed per log to meet quota rate limit
+    delay_per_log = 60.0 / log_read_requests_per_min
+
+    for entry in client.list_entries(filter_=filter_str1, resource_names=logger_resource_name, page_size=250):
         logs.append(entry.to_api_repr())
-    for entry in client.list_entries(filter_=filter_str2, resource_names=logger_resource_name):
+        time.sleep(delay_per_log)
+    for entry in client.list_entries(filter_=filter_str2, resource_names=logger_resource_name, page_size=250):
         logs.append(entry.to_api_repr())
+        time.sleep(delay_per_log)
     return json.dumps(logs, separators=(',', ':'))
 
 # GCS folder export
