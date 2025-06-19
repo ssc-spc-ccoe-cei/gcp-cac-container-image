@@ -818,7 +818,7 @@ def upload_json():
     # logger.info("Step 13 of 13 - Compiling final data")
     # final_list = asset_data + scc_data + logger_data + gcs_folder_data + essentialcontacts_data + ws_user_data + user_auth_data + org_admin_group_member_data + org_resource_tag_value_data + certmanager_data + breakglass_auth_data + org_project_tag_data
     # compiled_data = {"input": {"data": final_list}}
-    # upload_tasks.append((compiled_data, "data/compiled.json"))
+    upload_tasks.append((compiled_data, "data/compiled.json"))
 
     # Perform batch upload
     logger.info("Performing batch upload")
