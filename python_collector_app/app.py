@@ -816,23 +816,17 @@ def upload_json():
     upload_tasks.append((org_project_tag_data, "data/org_project_tag_data.json"))
 
     # # Step 13: Compile final data
-    # logger.info("Step 13 of 13 - Compiling final data")
-    # final_list = asset_data + scc_data + logger_data + gcs_folder_data + essentialcontacts_data + ws_user_data + user_auth_data + org_admin_group_member_data + org_resource_tag_value_data + certmanager_data + breakglass_auth_data + org_project_tag_data
-    # compiled_data = {"input": {"data": final_list}}
-    # upload_tasks.append((compiled_data, "data/compiled.json"))
+    logger.info("Step 13 of 13 - Compiling final data")
+    final_list = asset_data + scc_data + logger_data + gcs_folder_data + essentialcontacts_data + ws_user_data + user_auth_data + org_admin_group_member_data + org_resource_tag_value_data + certmanager_data + breakglass_auth_data + org_project_tag_data
+    compiled_data = {"input": {"data": final_list}}
+    upload_tasks.append((compiled_data, "data/compiled.json"))
 
-    # # Perform batch upload
-    # logger.info("Performing batch upload")
-    # batch_upload_json_to_gcs(bucket_name, upload_tasks)
-    # overall_end_time = time.time()
-    # duration_td = timedelta(seconds=overall_end_time - overall_start_time)
-    # logger.info(f"Time taken to execute operation: {duration_td}")
-    client = storage.client()
-    bucket = client.bucket(bucket_name)
-    file = bucket.blob("data/compiled.json")
-    compiled_json_str = file.download_as_text()
-    compiled_data = json.loads(compiled_json_str)
-    logger.info("SUCCESS")
+    # Perform batch upload
+    logger.info("Performing batch upload")
+    batch_upload_json_to_gcs(bucket_name, upload_tasks)
+    overall_end_time = time.time()
+    duration_td = timedelta(seconds=overall_end_time - overall_start_time)
+    logger.info(f"Time taken to execute operation: {duration_td}")
 
     time.sleep(5)
     # Evaluate compiled data
