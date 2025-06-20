@@ -11,3 +11,4 @@ google-cloud-securitycenter == 1.38.1
 google-api-python-client == 2.156.0
 cryptography == 44.0.2
 google-api-core == 2.24.0
+httpx[http2]

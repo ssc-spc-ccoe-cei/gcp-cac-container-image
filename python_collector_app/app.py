@@ -23,6 +23,7 @@ import time
 import re
 from datetime import datetime, timedelta, timezone
 from cryptography import x509
+import httpx
 
 # Logger setup
 logger = logging.getLogger()
@@ -815,9 +816,9 @@ def upload_json():
     upload_tasks.append((org_project_tag_data, "data/org_project_tag_data.json"))
 
     # # Step 13: Compile final data
-    # logger.info("Step 13 of 13 - Compiling final data")
-    # final_list = asset_data + scc_data + logger_data + gcs_folder_data + essentialcontacts_data + ws_user_data + user_auth_data + org_admin_group_member_data + org_resource_tag_value_data + certmanager_data + breakglass_auth_data + org_project_tag_data
-    # compiled_data = {"input": {"data": final_list}}
+    logger.info("Step 13 of 13 - Compiling final data")
+    final_list = asset_data + scc_data + logger_data + gcs_folder_data + essentialcontacts_data + ws_user_data + user_auth_data + org_admin_group_member_data + org_resource_tag_value_data + certmanager_data + breakglass_auth_data + org_project_tag_data
+    compiled_data = {"input": {"data": final_list}}
     upload_tasks.append((compiled_data, "data/compiled.json"))
 
     # Perform batch upload
@@ -829,7 +830,8 @@ def upload_json():
 
     time.sleep(5)
     # Evaluate compiled data
-    response = requests.post("http://localhost:8181/v1/data/main/guardrail", json=compiled_data)
+    client = httpx.Client(http2=True)
+    response = requests.post("http://localhost:8181/v1/data/main/guardrail", json=compiled_data, timeout=10.0)
     if response.ok:
         response_data = response.json()
         try:
