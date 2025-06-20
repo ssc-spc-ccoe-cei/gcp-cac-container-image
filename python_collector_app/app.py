@@ -16,7 +16,6 @@ from flask import Flask, jsonify
 import json
 from marshmallow import Schema, fields
 import requests
-from waitress import serve
 import os
 import logging
 import time
@@ -24,6 +23,11 @@ import re
 from datetime import datetime, timedelta, timezone
 from cryptography import x509
 import httpx
+import asyncio
+from hypercorn.asyncio import serve as hypercorn_serve
+from hypercorn.config import Config
+from asgiref.wsgi import WsgiToAsgi
+
 
 # Logger setup
 logger = logging.getLogger()
@@ -871,4 +875,14 @@ def upload_json():
 # MAIN FUNCTION
 #----------------------------------------
 if __name__ == '__main__':
-    serve(app, host='0.0.0.0', port=port)
+    # Use Hypercorn to serve the Flask app with HTTP/2 support
+    config = Config()
+    config.bind = [f"0.0.0.0:{port}"]
+    config.use_reloader = False
+
+    # Wrap the Flask WSGI app to be ASGI compatible
+    asgi_app = WsgiToAsgi(app)
+
+    # Run the server
+    asyncio.run(hypercorn_serve(asgi_app, config))
+
