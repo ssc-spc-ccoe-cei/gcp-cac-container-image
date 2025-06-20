@@ -23,6 +23,7 @@ import time
 import re
 from datetime import datetime, timedelta, timezone
 from cryptography import x509
+import httpx
 
 # Logger setup
 logger = logging.getLogger()
@@ -829,7 +830,8 @@ def upload_json():
 
     time.sleep(5)
     # Evaluate compiled data
-    response = requests.post("http://localhost:8181/v1/data/main/guardrail", json=compiled_data)
+    client = httpx.Client(http2=True)
+    response = client.post("http://localhost:8181/v1/data/main/guardrail", json=compiled_data, timeout=10.0)
     if response.ok:
         response_data = response.json()
         try:
