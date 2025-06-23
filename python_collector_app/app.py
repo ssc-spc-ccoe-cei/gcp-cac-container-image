@@ -837,7 +837,7 @@ def upload_json():
     client = httpx.Client(http2=True)
     response = client.post("http://localhost:8181/v1/data/main/guardrail", json=compiled_data, timeout=10.0)
     logger.info(type(response))
-    if response.ok:
+    if 200 <= response.status_code < 300:
         response_data = response.json()
         try:
             filtered_json_objects = response_data['result']
