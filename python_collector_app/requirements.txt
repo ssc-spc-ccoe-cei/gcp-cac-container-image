@@ -13,3 +13,4 @@ google-api-core == 2.24.0
 httpx[http2]
 hypercorn==0.16.0
 asgiref==3.8.1
+
