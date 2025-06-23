@@ -836,6 +836,7 @@ def upload_json():
     # Evaluate compiled data
     client = httpx.Client(http2=True)
     response = client.post("http://localhost:8181/v1/data/main/guardrail", json=compiled_data, timeout=10.0)
+    logger.info(type(response))
     if response.ok:
         response_data = response.json()
         try:
