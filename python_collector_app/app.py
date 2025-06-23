@@ -16,7 +16,6 @@ from flask import Flask, jsonify
 import json
 from marshmallow import Schema, fields
 import requests
-from waitress import serve
 import os
 import logging
 import time
@@ -24,6 +23,11 @@ import re
 from datetime import datetime, timedelta, timezone
 from cryptography import x509
 import httpx
+import asyncio
+from hypercorn.asyncio import serve as hypercorn_serve
+from hypercorn.config import Config
+from asgiref.wsgi import WsgiToAsgi
+
 
 # Logger setup
 logger = logging.getLogger()
@@ -815,7 +819,7 @@ def upload_json():
     org_project_tag_data = json.loads(org_project_profile_tag_export(asset_parent, project_profile_tag_key_list))
     upload_tasks.append((org_project_tag_data, "data/org_project_tag_data.json"))
 
-    # Step 13: Compile final data
+    # # Step 13: Compile final data
     logger.info("Step 13 of 13 - Compiling final data")
     final_list = asset_data + scc_data + logger_data + gcs_folder_data + essentialcontacts_data + ws_user_data + user_auth_data + org_admin_group_member_data + org_resource_tag_value_data + certmanager_data + breakglass_auth_data + org_project_tag_data
     compiled_data = {"input": {"data": final_list}}
@@ -832,7 +836,7 @@ def upload_json():
     # Evaluate compiled data
     client = httpx.Client(http2=True)
     response = client.post("http://localhost:8181/v1/data/main/guardrail", json=compiled_data, timeout=10.0)
-    if response.ok:
+    if 200 <= response.status_code < 300:
         response_data = response.json()
         try:
             filtered_json_objects = response_data['result']
@@ -871,4 +875,14 @@ def upload_json():
 # MAIN FUNCTION
 #----------------------------------------
 if __name__ == '__main__':
-    serve(app, host='0.0.0.0', port=port)
+    # Use Hypercorn to serve the Flask app with HTTP/2 support
+    config = Config()
+    config.bind = [f"0.0.0.0:{port}"]
+    config.use_reloader = False
+
+    # Wrap the Flask WSGI app to be ASGI compatible
+    asgi_app = WsgiToAsgi(app)
+
+    # Run the server
+    asyncio.run(hypercorn_serve(asgi_app, config))
+
