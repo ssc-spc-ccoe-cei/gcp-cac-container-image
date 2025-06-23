@@ -642,11 +642,11 @@ def org_resource_tag_value_export(customer_id_parent, tag_key_list):
         # querying for effectiveTagKeys for finding directly attached or inherited tags, however, not all resources support effectiveTagKeys
         request = asset_v1.SearchAllResourcesRequest(scope=customer_id_parent, query=f"effectiveTagKeys:{tag_key}")
         page_result = asset_client.search_all_resources(request=request)
-        for page_item in page_result:
-            if page_item.asset_type not in excluded_assets:
-                for i in range(len(page_item.tags)):
-                    if page_item.tags[i].tag_key.endswith(tag_key):
-                        tagged_object = {"kind": "cloudresourcemanager#tagged#asset", "name": page_item.name, "parent": page_item.parent_full_resource_name, "project_number": page_item.project, "asset_type": page_item.asset_type, "display_name": page_item.display_name, "location": page_item.location, "tag_key": page_item.tags[i].tag_key, "tag_value": page_item.tags[i].tag_value}
+        for response in page_result:
+            if response.asset_type not in excluded_assets:
+                for i in range(len(response.tags)):
+                    if response.tags[i].tag_key.endswith(tag_key):
+                        tagged_object = {"kind": "cloudresourcemanager#tagged#asset", "name": response.name, "parent": response.parent_full_resource_name, "project_number": response.project, "asset_type": response.asset_type, "display_name": response.display_name, "location": response.location, "tag_key": response.tags[i].tag_key, "tag_value": response.tags[i].tag_value}
                         if tagged_object not in tagged_resources_list:
                             tagged_resources_list.append(tagged_object)
                         else:
@@ -736,11 +736,11 @@ def org_project_profile_tag_export(asset_parent, project_profile_tag_key_list):
         # querying for effectiveTagKeys for finding directly attached or inherited tags, however, not all resources support effectiveTagKeys
         request = asset_v1.SearchAllResourcesRequest(scope=asset_parent, query=f"effectiveTagKeys:{tag_key}")
         page_result = asset_client.search_all_resources(request=request)
-        for page_item in page_result:
-            if page_item.asset_type in included_assets:
-                for i in range(len(page_item.tags)):
-                    if page_item.tags[i].tag_key.endswith(tag_key):
-                        tagged_project = {"kind": "cloudresourcemanager#tagged#project", "name": page_item.name, "parent": page_item.parent_full_resource_name, "project_number": page_item.project, "asset_type": page_item.asset_type, "display_name": page_item.display_name, "tag_key": page_item.tags[i].tag_key, "tag_value": page_item.tags[i].tag_value}
+        for response in page_result:
+            if response.asset_type in included_assets:
+                for i in range(len(response.tags)):
+                    if response.tags[i].tag_key.endswith(tag_key):
+                        tagged_project = {"kind": "cloudresourcemanager#tagged#project", "name": response.name, "parent": response.parent_full_resource_name, "project_number": response.project, "asset_type": response.asset_type, "display_name": response.display_name, "tag_key": response.tags[i].tag_key, "tag_value": response.tags[i].tag_value}
                         if tagged_project not in tagged_projects_list:
                             tagged_projects_list.append(tagged_project)
                         else:
@@ -836,7 +836,6 @@ def upload_json():
     # Evaluate compiled data
     client = httpx.Client(http2=True)
     response = client.post("http://localhost:8181/v1/data/main/guardrail", json=compiled_data, timeout=10.0)
-    logger.info(type(response))
     if 200 <= response.status_code < 300:
         response_data = response.json()
         try:
