@@ -75,8 +75,8 @@ scc_parent = f"organizations/{org_id}/sources/-"
 scc_logs = []
 logger_resource_name = [f"organizations/{org_id}"]
 customer_id_parent = f"customers/{customer_id}"
-days_back_admin = 180
-hours_back_cloudaudit = 24
+days_back_admin = 400
+hours_back_cloudaudit = 96
 f_name = f"results-{org_name}.json"
 ndf_name = f"results-{org_name}.ndjson"
 timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d")
@@ -92,7 +92,7 @@ gcs_folder_objects = []
 credentials, project_id = google.auth.default()
 
 logger_export_adminapis_admin = (
-    f'logName="organizations/{org_id}/logs/cloudaudit.googleapis.com%2Fdata_access"'
+    f'logName="organizations/{org_id}/logs/cloudaudit.googleapis.com%2Factivity"'
     f' AND protoPayload.serviceName="admin.googleapis.com"'
     f' AND timestamp>="{(datetime.now(timezone.utc) - timedelta(days=days_back_admin)).isoformat()}"'
 )
