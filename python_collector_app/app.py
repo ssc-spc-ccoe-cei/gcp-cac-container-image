@@ -92,7 +92,7 @@ gcs_folder_objects = []
 credentials, project_id = google.auth.default()
 
 logger_export_adminapis_admin = (
-    f'logName="organizations/{org_id}/logs/cloudaudit.googleapis.com%2Factivity"'
+    f'logName="organizations/{org_id}/logs/cloudaudit.googleapis.com%2Fdata_access"'
     f' AND protoPayload.serviceName="admin.googleapis.com"'
     f' AND timestamp>="{(datetime.now(timezone.utc) - timedelta(days=days_back_admin)).isoformat()}"'
 )
