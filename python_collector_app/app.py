@@ -819,9 +819,23 @@ def upload_json():
     org_project_tag_data = json.loads(org_project_profile_tag_export(asset_parent, project_profile_tag_key_list))
     upload_tasks.append((org_project_tag_data, "data/org_project_tag_data.json"))
 
+    def read_file(bucket_name, source_blob_name):
+        try:
+            storage_client = storage.client()
+            bucket = storage_client.bucket(bucket_name)
+            blob = bucket.blob(source_blob_name)
+            json_string = blob.download_as_text()
+            content = json.loads(json_string)
+            return content
+        except Exception as e:
+            logger.error (f"Error dowloading file")
+            return None
+    additional_file = read_file(bucket_name, "data/extra.json")
+
+
     # # Step 13: Compile final data
     logger.info("Step 13 of 13 - Compiling final data")
-    final_list = asset_data + scc_data + logger_data + gcs_folder_data + essentialcontacts_data + ws_user_data + user_auth_data + org_admin_group_member_data + org_resource_tag_value_data + certmanager_data + breakglass_auth_data + org_project_tag_data
+    final_list = asset_data + scc_data + logger_data + gcs_folder_data + essentialcontacts_data + ws_user_data + user_auth_data + org_admin_group_member_data + org_resource_tag_value_data + certmanager_data + breakglass_auth_data + org_project_tag_data + additional_file
     compiled_data = {"input": {"data": final_list}}
     upload_tasks.append((compiled_data, "data/compiled.json"))
 
