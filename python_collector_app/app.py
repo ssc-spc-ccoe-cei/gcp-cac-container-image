@@ -48,7 +48,7 @@ tenant_domain = os.environ['TENANT_DOMAIN']
 policy_version = os.environ['POLICY_VERSION']
 app_version = os.environ['APP_VERSION']
 customer_id = os.environ['CUSTOMER_ID'] # your directory customer ID (`gcloud organizations list`)
-log_read_requests_per_min = int(os.environ.get("LOG_READ_REQUESTS_PER_MIN", 60))
+log_read_requests_per_min = int(os.environ.get("LOG_READ_REQUESTS_PER_MIN", 200))
 
 # your Workspace domain, if env var not provided,
 # it is implied you do not have a Workspace account, then use empty string '' as default
@@ -830,7 +830,7 @@ def upload_json():
         except Exception as e:
             logger.error (f"Error dowloading file")
             return None
-    additional_file = read_file(bucket_name, "data/extra.json")
+    additional_file = read_file("compliance-hub-152207934868", "data/extra.json")
 
 
     # # Step 13: Compile final data
