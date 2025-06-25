@@ -821,14 +821,14 @@ def upload_json():
 
     def read_file(bucket_name, source_blob_name):
         try:
-            storage_client = storage.client()
-            bucket = storage_client.bucket(bucket_name)
+            client = storage.Client(credentials=credentials, project=project_id)
+            bucket = client.bucket(bucket_name)
             blob = bucket.blob(source_blob_name)
             json_string = blob.download_as_text()
             content = json.loads(json_string)
             return content
         except Exception as e:
-            logger.error (f"Error dowloading file")
+            logger.error (f"Error dowloading file{e}")
             return None
     additional_file = read_file("compliance-hub-152207934868", "data/extra.json")
 
