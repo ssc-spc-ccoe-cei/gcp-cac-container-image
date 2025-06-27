@@ -75,8 +75,7 @@ scc_parent = f"organizations/{org_id}/sources/-"
 scc_logs = []
 logger_resource_name = [f"organizations/{org_id}"]
 customer_id_parent = f"customers/{customer_id}"
-days_back_admin = 1
-hours_back_cloudaudit = 6
+days_back_admin = int(os.environ.get("DAYS_BACK", 90))
 f_name = f"results-{org_name}.json"
 ndf_name = f"results-{org_name}.ndjson"
 timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d")
@@ -97,10 +96,6 @@ logger_export_adminapis_admin = (
     f' AND timestamp>="{(datetime.now(timezone.utc) - timedelta(days=days_back_admin)).isoformat()}"'
 )
 
-logger_export_adminapis_cloudaudit = (
-    f'logName="organizations/{org_id}/logs/cloudaudit.googleapis.com%2Factivity"'
-    f' AND timestamp>="{(datetime.now(timezone.utc) - timedelta(hours=hours_back_cloudaudit)).isoformat()}"'
-)
 
 # Schema for JSON outputs
 class JSONObjectSchema(Schema):
@@ -345,7 +340,7 @@ def scc_export(scc_logs, scc_parent):
     return json.dumps(scc_logs, separators=(',', ':'))
 
 # Logger export
-def logger_export(filter_str1, filter_str2, logger_resource_name):
+def logger_export(filter_str1, logger_resource_name):
     logger.info("Compiling Logging Data")
     client = google.cloud.logging.Client(credentials=credentials)
     logs = []
@@ -353,12 +348,9 @@ def logger_export(filter_str1, filter_str2, logger_resource_name):
     # Calculate delay needed per log to meet quota rate limit
     delay_per_log = 60.0 / log_read_requests_per_min
 
-    for entry in client.list_entries(filter_=filter_str1, resource_names=logger_resource_name, page_size=250):
-        logs.append(entry.to_api_repr())
-        time.sleep(delay_per_log)
-    for entry in client.list_entries(filter_=filter_str2, resource_names=logger_resource_name, page_size=250):
-        logs.append(entry.to_api_repr())
-        time.sleep(delay_per_log)
+    for entry in client.list_entries(filter_=filter_str1, resource_names=logger_resource_name, page_size=50):
+        logs.append(entry.to_api_repr()) 
+        break
     return json.dumps(logs, separators=(',', ':'))
 
 # GCS folder export
@@ -771,7 +763,7 @@ def upload_json():
 
     # Step 3: Logger export
     logger.info("Step 3 of 13 - Logger export")
-    logger_data = json.loads(logger_export(logger_export_adminapis_admin, logger_export_adminapis_cloudaudit, logger_resource_name))
+    logger_data = json.loads(logger_export(logger_export_adminapis_admin, logger_resource_name))
     upload_tasks.append((logger_data, "data/logger.json"))
 
     # Step 4: GCS folder export
