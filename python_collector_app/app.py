@@ -711,7 +711,7 @@ def breakglass_auth_export(days, breakglass_user_emails):
         )
     except Exception as e:
         print(f"Error building filter string: {e}")
-        return []
+        return json.dumps([])
         
     asset_parent = f"organizations/{org_id}"
 
@@ -719,7 +719,7 @@ def breakglass_auth_export(days, breakglass_user_emails):
         entries = auth_log_client.list_entries(resource_names=[asset_parent], filter_=filter_str)
     except Exception as e:
         print(f"Error retrieving logs: {e}")
-        return []
+        return json.dump([])
 
     breakglass_auth_logs_list = []
     try:
