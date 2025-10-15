@@ -54,7 +54,10 @@ log_read_requests_per_min = int(os.environ.get("LOG_READ_REQUESTS_PER_MIN", 200)
 # it is implied you do not have a Workspace account, then use empty string '' as default
 ws_domain = os.environ.get('WORKSPACE_DOMAIN', '')
 org_admin_group_email = os.environ.get('ORG_ADMIN_GROUP_EMAIL', f"gcp-organization-admins@{ws_domain}")
-breakglass_user_emails = os.environ.get('BREAKGLASS_USER_EMAILS', ["breakglass@ssc.gc.ca"])
+# Breakglass user emails is imported as a string, need to parse it to a list
+breakglass_user_emails_str = os.environ.get('BREAKGLASS_USER_EMAILS', '["breakglass@ssc.gc.ca"]')
+breakglass_user_emails = json.loads(breakglass_user_emails_str)
+
 
 credentials, project_id = google.auth.default()
 
