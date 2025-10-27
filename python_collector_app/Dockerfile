@@ -9,7 +9,7 @@ RUN pip install --upgrade pip setuptools wheel pyinstaller && \
     apk del .build-deps gcc musl-dev  make automake gcc g++ subversion python3-dev libstdc++ && \
     pip uninstall -r requirements.txt -y
 
-FROM gcr.io/google.com/cloudsdktool/cloud-sdk:505.0.0-alpine
+FROM gcr.io/google.com/cloudsdktool/cloud-sdk:543.0.0-alpine
 
 RUN rm /usr/local/bin/docker
 
