@@ -1,0 +1,16 @@
+flask
+requests
+google-auth
+google-cloud-storage
+marshmallow
+google-cloud-asset
+protobuf
+google-cloud-logging
+google-cloud-securitycenter
+google-api-python-client
+cryptography
+google-api-core
+httpx[http2]
+hypercorn
+asgiref
+    
