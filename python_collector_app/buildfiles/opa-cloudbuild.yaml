@@ -9,4 +9,4 @@ options:
   automapSubstitutions: true
   logging: CLOUD_LOGGING_ONLY
 substitutions:
-  _OPA_VERSION: 0.70.0
+  _OPA_VERSION: 1.9.0
