@@ -11,8 +11,6 @@ RUN pip install --upgrade pip setuptools wheel pyinstaller && \
 
 FROM gcr.io/google.com/cloudsdktool/cloud-sdk:543.0.0-alpine
 
-RUN rm /usr/local/bin/docker
-
 RUN addgroup  cac-user \
     && adduser cac-user -D -G cac-user  \
     && mkdir app && chown cac-user:cac-user app
