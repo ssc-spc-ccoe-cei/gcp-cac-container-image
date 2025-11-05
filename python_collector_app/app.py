@@ -48,13 +48,16 @@ tenant_domain = os.environ['TENANT_DOMAIN']
 policy_version = os.environ['POLICY_VERSION']
 app_version = os.environ['APP_VERSION']
 customer_id = os.environ['CUSTOMER_ID'] # your directory customer ID (`gcloud organizations list`)
-log_read_requests_per_min = int(os.environ.get("LOG_READ_REQUESTS_PER_MIN", 60))
+log_read_requests_per_min = int(os.environ.get("LOG_READ_REQUESTS_PER_MIN", 200))
 
 # your Workspace domain, if env var not provided,
 # it is implied you do not have a Workspace account, then use empty string '' as default
 ws_domain = os.environ.get('WORKSPACE_DOMAIN', '')
 org_admin_group_email = os.environ.get('ORG_ADMIN_GROUP_EMAIL', f"gcp-organization-admins@{ws_domain}")
-breakglass_user_email = os.environ.get('BREAKGLASS_USER_EMAIL', 'breakglass@ssc.gc.ca')
+# Breakglass user emails is imported as a string, need to parse it to a list
+breakglass_user_emails_str = os.environ.get('BREAKGLASS_USER_EMAILS', '["breakglass@ssc.gc.ca"]')
+breakglass_user_emails = json.loads(breakglass_user_emails_str)
+
 
 credentials, project_id = google.auth.default()
 
@@ -677,11 +680,11 @@ def certmanager_export(certmanager_resource_id):
         return json.dumps([])
     return json.dumps(certificates_list, separators=(',', ':'))
 
-def breakglass_auth_export(days, breakglass_user_email):
-    """Retrieves Organizationa authentication logs in for breakglass user account in the last X days
+def breakglass_auth_export(days, breakglass_user_emails):
+    """Retrieves Organizationa authentication logs in for breakglass user accounts in the last X days
     Args:
         days (int): number of days to filter logs
-        breakglass_user_email (string): breakglass user email
+        breakglass_user_emails (list(string)): breakglass user emails
 
     Returns:
         A list of authentication log entries (if any)
@@ -689,15 +692,35 @@ def breakglass_auth_export(days, breakglass_user_email):
     auth_log_client = google.cloud.logging.Client()
     now = datetime.now(timezone.utc)
     time_days_ago = now - timedelta(days=days)
-    filter_str = f'timestamp >= "{time_days_ago.isoformat()}" \
-                   AND logName="organizations/{org_id}/logs/cloudaudit.googleapis.com%2Factivity" \
-                   AND protoPayload.authenticationInfo.principalEmail="{breakglass_user_email}" \
-                   -protoPayload.serviceName="iam.googleapis.com" \
-                   -protoPayload.serviceName="k8s.io"'
+    
+    # Build a list of filter strings for each email
+    try:
+        list_of_email_queries = []
+
+        for email in breakglass_user_emails:
+            list_of_email_queries.append(f'protoPayload.authenticationInfo.principalEmail="{email}"')
+
+        all_emails_query = " OR ".join(list_of_email_queries)
+
+        filter_str = (
+            f'timestamp >= "{time_days_ago.isoformat()}" AND '
+            f'logName="organizations/{org_id}/logs/cloudaudit.googleapis.com%2Factivity" AND '
+            f' ({all_emails_query}) '
+            f'-protoPayload.serviceName="iam.googleapis.com" '
+            f'-protoPayload.serviceName="k8s.io"'
+        )
+    except Exception as e:
+        print(f"Error building filter string: {e}")
+        return json.dumps([])
+        
+    asset_parent = f"organizations/{org_id}"
+
     try:
         entries = auth_log_client.list_entries(resource_names=[asset_parent], filter_=filter_str)
     except Exception as e:
-        logger.error(f"Error retrieving logs: {e}")
+        print(f"Error retrieving logs: {e}")
+        return json.dump([])
+
     breakglass_auth_logs_list = []
     try:
         for entry in entries:
@@ -803,7 +826,7 @@ def upload_json():
 
     # Step 11: 366 days Breakglass Account auth data export
     logger.info("Step 11 of 13 - GCP Breakglass User Auth data export")
-    breakglass_auth_data = json.loads(breakglass_auth_export(366, breakglass_user_email))
+    breakglass_auth_data = json.loads(breakglass_auth_export(366, breakglass_user_emails))
     upload_tasks.append((breakglass_auth_data, "data/breakglass_auth_data.json"))
 
     # Step 12: Project profile tag data
@@ -811,9 +834,23 @@ def upload_json():
     org_project_tag_data = json.loads(org_project_profile_tag_export(asset_parent, project_profile_tag_key_list))
     upload_tasks.append((org_project_tag_data, "data/org_project_tag_data.json"))
 
+    def read_file(bucket_name, source_blob_name):
+        try:
+            client = storage.Client(credentials=credentials, project=project_id)
+            bucket = client.bucket(bucket_name)
+            blob = bucket.blob(source_blob_name)
+            json_string = blob.download_as_text()
+            content = json.loads(json_string)
+            return content
+        except Exception as e:
+            logger.error (f"Error dowloading file{e}")
+            return None
+    additional_file = read_file("compliance-hub-152207934868", "data/extra.json")
+
+
     # # Step 13: Compile final data
     logger.info("Step 13 of 13 - Compiling final data")
-    final_list = asset_data + scc_data + logger_data + gcs_folder_data + essentialcontacts_data + ws_user_data + user_auth_data + org_admin_group_member_data + org_resource_tag_value_data + certmanager_data + breakglass_auth_data + org_project_tag_data
+    final_list = asset_data + scc_data + logger_data + gcs_folder_data + essentialcontacts_data + ws_user_data + user_auth_data + org_admin_group_member_data + org_resource_tag_value_data + certmanager_data + breakglass_auth_data + org_project_tag_data + additional_file
     compiled_data = {"input": {"data": final_list}}
     upload_tasks.append((compiled_data, "data/compiled.json"))
 

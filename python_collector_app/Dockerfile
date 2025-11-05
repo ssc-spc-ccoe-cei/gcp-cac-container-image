@@ -1,5 +1,5 @@
 #DockerImage
-FROM  python:3.9.21-alpine3.21 AS python-build
+FROM  python:3.12.12-alpine3.21 AS python-build
 COPY ["app.py", "requirements.txt", "./"]
 RUN apk add  --no-cache --virtual .build-deps gcc musl-dev  make automake gcc g++ subversion python3-dev libstdc++ 
 
@@ -9,9 +9,7 @@ RUN pip install --upgrade pip setuptools wheel pyinstaller && \
     apk del .build-deps gcc musl-dev  make automake gcc g++ subversion python3-dev libstdc++ && \
     pip uninstall -r requirements.txt -y
 
-FROM gcr.io/google.com/cloudsdktool/cloud-sdk:505.0.0-alpine
-
-RUN rm /usr/local/bin/docker
+FROM gcr.io/google.com/cloudsdktool/cloud-sdk:543.0.0-alpine
 
 RUN addgroup  cac-user \
     && adduser cac-user -D -G cac-user  \
