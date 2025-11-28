@@ -845,7 +845,7 @@ def upload_json():
         except Exception as e:
             logger.error (f"Error dowloading file{e}")
             return None
-    additional_file = read_file("compliance-hub-152207934868", "data/extra.json")
+    additional_file = read_file(bucket_name, "data/extra.json")
 
 
     # # Step 13: Compile final data
