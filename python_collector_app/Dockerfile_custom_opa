@@ -1,7 +1,11 @@
-FROM gcr.io/google.com/cloudsdktool/cloud-sdk:543.0.0-alpine
+ARG CLOUD_SDK_VERSION=558.0.0
+ARG OPA_VERSION=1.14.0
 
-RUN curl -L -o /usr/bin/opa https://openpolicyagent.org/downloads/v1.9.0/opa_linux_amd64_static
+FROM gcr.io/google.com/cloudsdktool/cloud-sdk:${CLOUD_SDK_VERSION}-alpine
 
-RUN chmod +x /usr/bin/opa
+ARG OPA_VERSION
+
+RUN wget -q -O /usr/bin/opa "https://github.com/open-policy-agent/opa/releases/download/v${OPA_VERSION}/opa_linux_amd64_static" && \
+    chmod +x /usr/bin/opa
 
 CMD ["/bin/bash"]
