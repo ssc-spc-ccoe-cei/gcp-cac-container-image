@@ -26,6 +26,7 @@ import asyncio
 from hypercorn.asyncio import serve as hypercorn_serve
 from hypercorn.config import Config
 from asgiref.wsgi import WsgiToAsgi
+from generate_reports import generate_reports
 
 
 # Logger setup
@@ -78,6 +79,7 @@ customer_id_parent = f"customers/{customer_id}"
 days_back_admin = int(os.environ.get("DAYS_BACK", 90))
 f_name = f"results-{org_name}.json"
 ndf_name = f"results-{org_name}.ndjson"
+report_name = f"results-{org_name}.html"
 timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
 gcs_folders = [
@@ -236,6 +238,45 @@ def upload_file_to_gcs(bucket_name, file_name):
         logger.error(f"Error uploading {file_name}: {e}")
 
 
+def upload_string_to_gcs(bucket_name, string_data, file_name, content_type="text/plain"):
+    """Uploads raw string data directly to a GCS bucket.
+      
+    Args:
+        bucket_name (str): Target GCS bucket name.
+        string_data (str): The raw string payload to upload.
+        file_name (str): Destination file path/name in the bucket.
+        content_type (str): MIME type of the upload. Defaults to "text/plain".
+    """
+    try:
+        client = storage.Client(credentials=credentials, project=project_id)
+        bucket = client.bucket(bucket_name)
+        blob = bucket.blob(file_name)
+        blob.upload_from_string(string_data, content_type=content_type)
+        logger.info(f"Uploaded {file_name} to Cloud Storage")
+    except Exception as e:
+        logger.error(f"Error uploading {file_name}: {e}")
+
+
+def batch_upload_json_to_gcs(bucket_name, upload_tasks):
+    """Concurrently minifies and uploads multiple JSON payloads to GCS.
+    
+    Args:
+        bucket_name (str): Target GCS bucket name.
+        upload_tasks (list): A list of tuples containing (json_dict, file_name).
+    """
+    def upload_task(task):
+        json_data, file_name = task
+        json_string = json.dumps(json_data, separators=(',', ':'))
+        upload_string_to_gcs(bucket_name, json_string, file_name, "application/json")
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+        futures = {executor.submit(upload_task, task): task for task in upload_tasks}
+        for future in concurrent.futures.as_completed(futures):
+            try:
+                future.result()
+            except Exception as e:
+                logger.error(f"Error in batch upload: {e}")
+
 #----------------------------------------
 # DATA EXPORT FUNCTIONS
 #----------------------------------------
@@ -282,34 +323,6 @@ def download_from_gcs(bucket_name, file_names):
             except Exception as e:
                 logger.error(f"Error in batch processing: {e}")
     return combined_data
-
-# Batch upload JSON to GCS
-def batch_upload_json_to_gcs(bucket_name, upload_tasks):
-    def upload_task(task):
-        json_data, file_name = task
-        upload_json_to_gcs(bucket_name, json_data, file_name)
-
-    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
-        futures = {executor.submit(upload_task, task): task for task in upload_tasks}
-        for future in concurrent.futures.as_completed(futures):
-            try:
-                future.result()
-            except Exception as e:
-                logger.error(f"Error in batch upload: {e}")
-
-# Upload JSON to GCS
-def upload_json_to_gcs(bucket_name, json_data, file_name):
-    try:
-        logger.info(f"Uploading {file_name} to Cloud Storage")
-        client = storage.Client(credentials=credentials, project=project_id)
-        bucket = client.bucket(bucket_name)
-        blob = bucket.blob(file_name)
-
-        data = json.dumps(json_data, separators=(',', ':'))
-        blob.upload_from_string(data)
-        logger.info(f"Uploaded {file_name} to Cloud Storage")
-    except Exception as e:
-        logger.error(f"Error uploading {file_name}: {e}")
 
 # Parallelized asset export
 def parallelized_asset_export(asset_parent, content_type_list):
@@ -416,34 +429,6 @@ def workspace_users_export(ws_domain):
     except google.auth.exceptions.GoogleAuthError as auth_error:
         logger.error(f"Authentication error: {auth_error}")
     return json.dumps(ws_users, separators=(',', ':'))
-
-
-# Access Context Manager policy access levels export
-# NOT BEING USED
-def acm_export(asset_parent):
-    """Get Access Context Manager policies
-    Args:
-        asset_parent: org ID 
-
-    Returns:
-        List of ACM policies
-    """
-    logger.info("Compiling Access Context Manager Data")
-    acm_client = build("accesscontextmanager", "v1", credentials=credentials, cache_discovery=False)
-    request = acm_client.accessPolicies().list(parent=asset_parent)
-    results = request.execute()
-    # get a list of ACM policies that is not the "default policy"
-    acm_policy_list = []
-    for policy in results["accessPolicies"]:
-        if policy["title"] != "default policy":
-            acm_policy_list.append(policy["name"])
-    # ACM access levels contain the IP CIDR restrictions
-    acm_access_levels = []
-    for acm_policy in acm_policy_list:
-        request = acm_client.accessPolicies().accessLevels().list(parent=acm_policy)
-        results = request.execute()
-        acm_access_levels.append({"kind": "accesscontextmanager#accesspolicy", "policyName": acm_policy, "config": results})
-    return json.dumps(acm_access_levels, separators=(',', ':'))
 
 # Auth logs of users from Cloud Logging export
 def user_auth_ip_export(hours):
@@ -837,19 +822,23 @@ def upload_json():
             filtered_json_objects = response_data['result']
         except KeyError:
             logger.info(f"KEYERROR - NO RESPONSE_DATA")
-        filtered_json_objects = JSONObjectSchema(
-            many=True).dump(filtered_json_objects)
-        beautified_filtered_json_objects = json.dumps(
-            filtered_json_objects, indent=1, separators=(',', ': '))
-        beautified_filtered_json_objects = json.loads(
-            beautified_filtered_json_objects)
-        upload_json_to_gcs(bucket_name, beautified_filtered_json_objects, f_name)
+        
+        filtered_json_objects = JSONObjectSchema(many=True).dump(filtered_json_objects)
 
-        # creates an additional output file in .ndjson format (Newline Delimited JSON)
-        # uploads to GCS bucket at the root
-        # this file is for ingesting into BigQuery
-        json_to_ndjson(beautified_filtered_json_objects, ndf_name)
-        upload_file_to_gcs(bucket_name, ndf_name)
+        # Generate JSON results file
+        json_string = json.dumps(filtered_json_objects, indent=1, separators=(',', ': '))
+        upload_string_to_gcs(bucket_name, json_string, f_name, "application/json")
+
+        # Generate NDJSON results file - for ingesting into BigQuery
+        ndjson_string = json_to_ndjson(filtered_json_objects)
+        upload_string_to_gcs(bucket_name, ndjson_string, ndf_name, "application/x-ndjson")
+        
+        # Generate HTML results file
+        try:
+            html_report_string = generate_reports(filtered_json_objects)
+            upload_string_to_gcs(bucket_name, html_report_string, report_name, "text/html")
+        except Exception as report_error:
+            logger.error(f"Error generating HTML report: {report_error}")
 
         logger.info("CaC Evaluation Complete")
     else:
@@ -880,4 +869,3 @@ if __name__ == '__main__':
 
     # Run the server
     asyncio.run(hypercorn_serve(asgi_app, config))
-

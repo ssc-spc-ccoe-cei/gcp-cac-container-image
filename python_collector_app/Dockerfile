@@ -3,7 +3,7 @@ ARG PYTHON_VERSION=3.12.12
 ARG ALPINE_VERSION=3.23
 
 FROM python:${PYTHON_VERSION}-alpine${ALPINE_VERSION} AS python-build
-COPY ["app.py", "requirements.txt", "./"]
+COPY ["app.py", "generate_reports.py", "requirements.txt", "./"]
 RUN apk add  --no-cache --virtual .build-deps gcc musl-dev  make automake gcc g++ subversion python3-dev libstdc++ 
 
 RUN pip install --upgrade pip setuptools wheel pyinstaller && \
