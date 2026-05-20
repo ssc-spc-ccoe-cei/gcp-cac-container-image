@@ -3,7 +3,9 @@
 
 import json
 import math
+import os
 import re
+import sys
 
 # Shared report colors
 NON_COMPLIANT_TEXT_COLOR = "#721c24"
@@ -347,11 +349,10 @@ def generate_reports(data):
     """Generate a unified HTML report from JSON results.
 
     Args:
-        json_file_path: Path to input JSON results file
-        html_output_path: Output path for unified HTML report
+        data (list): A list of dictionaries containing the compliance results.
 
     Returns:
-        None
+        str: The generated HTML report as a string.
     """
 
     # Grab list of unique guardrails from the data
@@ -627,3 +628,25 @@ def generate_reports(data):
     )
 
     return(combined_html)
+
+if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        print(f"Usage: python {sys.argv[0]} <path_to_results.ndjson>")
+        sys.exit(1)
+
+    input_path = sys.argv[1]
+    output_path = os.path.splitext(input_path)[0] + ".html"
+
+    try:
+        with open(input_path, 'r', encoding='latin-1') as f:
+            results_data = [json.loads(line) for line in f if line.strip()]
+
+        html_report = generate_reports(results_data)
+
+        with open(output_path, 'w') as f:
+            f.write(html_report)
+
+        print(f"Successfully generated HTML report: {output_path}")
+    except Exception as e:
+        print(f"Error during report generation: {e}")
+        sys.exit(1)
