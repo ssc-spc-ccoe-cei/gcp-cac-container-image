@@ -28,6 +28,10 @@ INFO_TEXT_COLOR = "#0c5460"
 INFO_BACKGROUND_COLOR = "#d1ecf1"
 INFO_BORDER_COLOR = "#bee5eb"
 
+DATA_MISSING_TEXT_COLOR = "#ffffff"
+DATA_MISSING_BACKGROUND_COLOR = "#6f42c1"
+DATA_MISSING_BORDER_COLOR = "#5a32a3"
+
 BODY_BACKGROUND_COLOR = "#f4f6f8"
 CONTAINER_BACKGROUND_COLOR = "#ffffff"
 TEXT_COLOR = "#333333"
@@ -60,6 +64,7 @@ tr:hover {{ background-color: {TABLE_HOVER_BACKGROUND_COLOR}; }}
 .status-COMPLIANT {{ color: {COMPLIANT_TEXT_COLOR}; background-color: {COMPLIANT_BACKGROUND_COLOR}; border: 1px solid {COMPLIANT_BORDER_COLOR}; }}
 .status-NON-COMPLIANT {{ color: {NON_COMPLIANT_TEXT_COLOR}; background-color: {NON_COMPLIANT_BACKGROUND_COLOR}; border: 1px solid {NON_COMPLIANT_BORDER_COLOR}; }}
 .status-PENDING {{ color: {PENDING_TEXT_COLOR}; background-color: {PENDING_BACKGROUND_COLOR}; border: 1px solid {PENDING_BORDER_COLOR}; }}
+.status-DATA-MISSING {{ color: {DATA_MISSING_TEXT_COLOR}; background-color: {DATA_MISSING_BACKGROUND_COLOR}; border: 1px solid {DATA_MISSING_BORDER_COLOR}; }}
 .asset-name {{ word-break: break-all; font-family: monospace; font-size: 0.9em; color: {MUTED_TEXT_COLOR}; }}
 .group-header {{ background-color: {GROUP_HEADER_BACKGROUND_COLOR}; font-weight: bold; color: {MUTED_TEXT_COLOR}; font-size: 1.1em; }}
 .filter-label {{ font-weight: 600; color: {HEADING_COLOR}; margin-right: 8px; display: inline-block; }}
@@ -90,18 +95,9 @@ tr:hover {{ background-color: {TABLE_HOVER_BACKGROUND_COLOR}; }}
 #----------------------------------------
 # HELPER FUNCTIONS
 #----------------------------------------
-def _generate_pie_chart(compliant, noncompliant, pending):
-    """Generate an SVG pie chart for guardrail compliance status.
-
-    Args:
-        compliant: Number of compliant guardrails
-        noncompliant: Number of non-compliant guardrails
-        pending: Number of pending guardrails
-
-    Returns:
-        SVG chart HTML fragment (string)
-    """
-    total = compliant + noncompliant + pending
+def _generate_pie_chart(compliant, noncompliant, pending, missing):
+    """Generate an SVG pie chart for guardrail compliance status."""
+    total = compliant + noncompliant + pending + missing
     
     if total == 0:
         return ""
@@ -111,16 +107,20 @@ def _generate_pie_chart(compliant, noncompliant, pending):
         "compliant": COMPLIANT_BACKGROUND_COLOR,
         "noncompliant": NON_COMPLIANT_BACKGROUND_COLOR,
         "pending": PENDING_BACKGROUND_COLOR,
+        "missing": DATA_MISSING_BACKGROUND_COLOR,
     }
     border_colors = {
         "compliant": COMPLIANT_TEXT_COLOR,
         "noncompliant": NON_COMPLIANT_TEXT_COLOR,
         "pending": PENDING_TEXT_COLOR,
+        "missing": DATA_MISSING_BORDER_COLOR,
     }
 
     segments = []
     if noncompliant > 0:
         segments.append(("Non-compliant", noncompliant, colors["noncompliant"], border_colors["noncompliant"]))
+    if missing > 0:
+        segments.append(("Data Missing", missing, colors["missing"], border_colors["missing"]))
     if pending > 0:
         segments.append(("Pending", pending, colors["pending"], border_colors["pending"]))
     if compliant > 0:
@@ -219,6 +219,7 @@ def _build_filters(guardrails, projects=None, include_warn=True, view_prefix="")
         ("compliant", "Compliant"),
         ("noncompliant", "Non-compliant"),
         ("pending", "Pending"),
+        ("datamissing", "Missing"),
     ]
 
     # Only include warn status filter if requested. Only required for detailed reports
@@ -355,8 +356,16 @@ def generate_reports(data):
         str: The generated HTML report as a string.
     """
 
-    # Grab list of unique guardrails from the data
-    guardrails_list = sorted({item.get("guardrail", "Unknown") for item in data})
+    # Load guardrail manifest
+    manifest_path = os.path.join(os.path.dirname(__file__), 'guardrail_manifest.json')
+    try:
+        with open(manifest_path, 'r') as f:
+            master_manifest = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError) as e:
+        raise ValueError(f"Failed to load mandatory manifest at {manifest_path}: {e}. Ensure the file exists and is not empty.")
+
+    # Grab list of unique guardrails strictly from the manifest
+    guardrails_list = sorted(master_manifest.keys())
 
     # Extract unique projects from asset names
     projects_set = set()
@@ -430,11 +439,24 @@ def generate_reports(data):
     # ---------------------------------------------------------
 
     # Create a status order dictionary to sort items by status - whereby non-compliant items are first
+    # Initialize summary_data from the Master Manifest
+    summary_data = {}
+    for guardrail, validations in master_manifest.items():
+        for validation, description in validations.items():
+            key = (guardrail, validation)
+            summary_data[key] = {
+                "guardrail": guardrail,
+                "validation": validation,
+                "description": description,
+                "statuses": {"DATA-MISSING"},
+            }
+
     status_order = {
         "NON-COMPLIANT": 1,
-        "WARN": 2,
-        "PENDING": 3,
-        "COMPLIANT": 4,
+        "DATA-MISSING": 2,
+        "WARN": 3,
+        "PENDING": 4,
+        "COMPLIANT": 5,
     }
 
     detailed_data = sorted(
@@ -488,9 +510,6 @@ def generate_reports(data):
     # SUMMARY REPORT SECTION
     # ---------------------------------------------------------
 
-    # Iterate through items in the data and build a unique set of guardrails and validations
-    summary_data = {}
-    
     for item in data:
         guardrail = item.get("guardrail", "Unknown")
         validation = item.get("validation", "Unknown")
@@ -502,12 +521,20 @@ def generate_reports(data):
 
         # If the key is not in summary data, then create it
         if key not in summary_data:
+            # This handles findings that aren't in the manifest
             summary_data[key] = {
                 "guardrail": guardrail,
                 "validation": validation,
                 "description": description,
-                "statuses": set(),
+                "statuses": {status},
             }
+        else:
+            # Replace DATA-MISSING if real data is found
+            if "DATA-MISSING" in summary_data[key]["statuses"] and status != "UNKNOWN":
+                summary_data[key]["statuses"].remove("DATA-MISSING")
+            # Prefer description from results data if available
+            if description:
+                summary_data[key]["description"] = description
 
         # Tracks every discovered status across all items
         summary_data[key]["statuses"].add(status)
@@ -525,6 +552,7 @@ def generate_reports(data):
     guardrail_compliant = 0
     guardrail_noncompliant = 0
     guardrail_pending = 0
+    guardrail_missing = 0
 
     # Iterate through guardrails to calculate compliance status
     # If a validation is NON-COMPLIANT or PENDING, mark it accordingly - otherwise, it's compliant
@@ -532,8 +560,12 @@ def generate_reports(data):
       
         has_noncompliant = False
         has_pending = False
+        has_missing = False
 
         for validation in validations:
+            # DATA-MISSING is treated as a high-priority failure in the guardrail roll-up
+            if "DATA-MISSING" in validation["statuses"]:
+                has_missing = True
             # If any of the validation statuses are NON-COMPLIANT, then break out of the loop and mark the entire guardrail as non-compliant
             if "NON-COMPLIANT" in validation["statuses"]:
                 has_noncompliant = True
@@ -543,13 +575,15 @@ def generate_reports(data):
                 has_pending = True
         if has_noncompliant:
             guardrail_noncompliant += 1
+        elif has_missing:
+            guardrail_missing += 1
         elif has_pending:
             guardrail_pending += 1
         else:
             guardrail_compliant += 1
 
     # Create the pie chart HTML
-    pie_chart_html = _generate_pie_chart(guardrail_compliant, guardrail_noncompliant, guardrail_pending)
+    pie_chart_html = _generate_pie_chart(guardrail_compliant, guardrail_noncompliant, guardrail_pending, guardrail_missing)
 
     summary_section = f"""
     <div id="summary-view" class="view-section active">
@@ -585,6 +619,8 @@ def generate_reports(data):
             # Set the status appropriately based on if either NON-COMPLIANT or PENDING is in the statuses - fallback to compliant
             if "NON-COMPLIANT" in statuses:
                 status = "Non-compliant"
+            elif "DATA-MISSING" in statuses:
+                status = "Data-missing"
             elif "PENDING" in statuses:
                 status = "Pending"
             else:

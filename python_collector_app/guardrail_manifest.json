@@ -1,0 +1,61 @@
+{
+  "01": {
+    "0102": "MFA Enforcement",
+    "03": "Global Admins count",
+    "04": "User account Monitoring and Auditing",
+    "05": "Suspicious Activity Alerts",
+    "06": "Dedicated Admin accounts"
+  },
+  "02": {
+    "01": "Access Configuration and Policies",
+    "02": "Authorization Mechanisms",
+    "03": "Role Assignment Reviews",
+    "05": "Ensure default passwords have been changed for built-in accounts",
+    "06": "Password Policy Implementation",
+    "07": "Ensure account lockout policies and machanisms are in place",
+    "08": "Guest User Access"
+  },
+  "03": {
+    "01": "Endpoint Management - Allowed Policy Member Domains and User Source IP Constraints"
+  },
+  "04": {
+    "01": "Enterprise Monitoring Accounts",
+    "02": "Suspicious Activity Alerts"
+  },
+  "05": {
+    "01": "Data Location Restriction Policy"
+  },
+  "06": {
+    "01": "Encryption of Data at Rest",
+    "02": "Cryptographic Algorithms"
+  },
+  "07": {
+    "0102": "Protection of Data-in-Transit",
+    "03": "Certificates from Approved CA Issuers"
+  },
+  "08": {
+    "01": "Network Architecture with Appropriate Segmentation",
+    "02": "Cloud Deployment Guide",
+    "03": "Provider Segmentation Features"
+  },
+  "09": {
+    "04": "Storage Bucket Public Access Prevention"
+  },
+  "10": {
+    "01": "Memorandum of Understanding"
+  },
+  "11": {
+    "0102": "Essential & Event Logging Enabled",
+    "03": "User account Monitoring and Auditing",
+    "04": "Essential Contacts",
+    "05": "Ensure that logs are collected in an appropriate timezone",
+    "06": "Monitoring Use Cases for Cloud Platform"
+  },
+  "12": {
+    "01": "Third Party Marketplace Restrictions"
+  },
+  "13": {
+    "01": "Emergency Account Procedure",
+    "04": "Deptartmental CIO Approval of Emergency Account Procedure"
+  }
+}
