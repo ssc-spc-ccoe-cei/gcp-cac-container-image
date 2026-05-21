@@ -3,7 +3,6 @@
 
 import google.cloud.asset_v1 as asset_v1
 from google.protobuf.json_format import MessageToDict
-import google.cloud.securitycenter as securitycenter
 import google.cloud.logging
 import google.cloud.storage as storage
 from google.api_core.exceptions import NotFound
@@ -74,8 +73,6 @@ tag_key_list = ["PROJECT_PROFILE", "DATA_CLASSIFICATION"]
 project_profile_tag_key_list = ["PROJECT_PROFILE"]
 
 lock = threading.Lock()
-scc_parent = f"organizations/{org_id}/sources/-"
-scc_logs = []
 logger_resource_name = [f"organizations/{org_id}"]
 customer_id_parent = f"customers/{customer_id}"
 days_back_admin = int(os.environ.get("DAYS_BACK", 90))
@@ -329,18 +326,6 @@ def parallelized_asset_export(asset_parent, content_type_list):
                 logger.error(f"Error in asset export: {e}")
 
     return download_from_gcs(bucket_name, exported_files)
-
-# SCC Export
-def scc_export(scc_logs, scc_parent):
-    logger.info("Compiling SCC Data")
-    scc_client = securitycenter.SecurityCenterClient(credentials=credentials)
-    finding_result_iterator = scc_client.list_findings(
-        request={"parent": scc_parent, "filter": 'state="ACTIVE"'}
-    )
-    for finding_result in finding_result_iterator:
-        keyword_ideas_json = MessageToDict(finding_result._pb)
-        scc_logs.append(keyword_ideas_json)
-    return json.dumps(scc_logs, separators=(',', ':'))
 
 # Logger export
 def logger_export(filter_str1, logger_resource_name):
@@ -771,7 +756,7 @@ def upload_json():
     overall_start_time = time.time()
 
     # Step 1: Export assets in parallel
-    logger.info("Step 1 of 13 - Export assets in parallel")
+    logger.info("Step 1 of 12 - Export assets in parallel")
     asset_data = parallelized_asset_export(asset_parent, content_type_list)
 
     # Prepare batch upload tasks
@@ -779,78 +764,59 @@ def upload_json():
         (asset_data, "data/asset.json")
     ]
 
-    # Step 2: SCC export
-    logger.info("Step 2 of 13 - SCC export")
-    scc_data = json.loads(scc_export(scc_logs, scc_parent))
-    upload_tasks.append((scc_data, "data/scc.json"))
-
-    # Step 3: Logger export
-    logger.info("Step 3 of 13 - Logger export")
+    # Step 2: Logger export
+    logger.info("Step 2 of 12 - Logger export")
     logger_data = json.loads(logger_export(logger_export_adminapis_admin, logger_resource_name))
     upload_tasks.append((logger_data, "data/logger.json"))
 
-    # Step 4: GCS folder export
-    logger.info("Step 4 of 13 - GCS folder export")
+    # Step 3: GCS folder export
+    logger.info("Step 3 of 12 - GCS folder export")
     gcs_folder_data = json.loads(gcs_export(gcs_folders, gcs_folder_objects, bucket_name))
     upload_tasks.append((gcs_folder_data, "data/gcs.json"))
 
-    # Step 5: Essential Contacts export
-    logger.info("Step 5 of 13 - Essential Contacts export")
+    # Step 4: Essential Contacts export
+    logger.info("Step 4 of 12 - Essential Contacts export")
     essentialcontacts_data = json.loads(essentialcontacts_export(asset_parent))
     upload_tasks.append((essentialcontacts_data, "data/essentialcontacts.json"))
 
-    # Step 6: Workspace Users export
-    logger.info("Step 6 of 13 - Workspace Users export")
+    # Step 5: Workspace Users export
+    logger.info("Step 5 of 12 - Workspace Users export")
     ws_user_data = json.loads(workspace_users_export(ws_domain))
     upload_tasks.append((ws_user_data, "data/ws_users.json"))
 
-    # Step 7: 25 hour GCP User auth data export
-    logger.info("Step 7 of 13 - GCP User Auth data export")
+    # Step 6: 25 hour GCP User auth data export
+    logger.info("Step 6 of 12 - GCP User Auth data export")
     user_auth_data = json.loads(user_auth_ip_export(25))
     upload_tasks.append((user_auth_data, "data/user_auth_data.json"))
 
-    # Step 8: Org Admin Group members export
-    logger.info("Step 8 of 13 - Org Admin Group members export")
+    # Step 7: Org Admin Group members export
+    logger.info("Step 7 of 12 - Org Admin Group members export")
     org_admin_group_member_data = json.loads(org_admin_group_member_export(customer_id_parent, ws_domain, org_admin_group_email))
     upload_tasks.append((org_admin_group_member_data, "data/org_admin_group_members.json"))
 
-    # Step 9: Asset tags export
-    logger.info("Step 9 of 13 - Asset tags export")
+    # Step 8: Asset tags export
+    logger.info("Step 8 of 12 - Asset tags export")
     org_resource_tag_value_data = json.loads(org_resource_tag_value_export(asset_parent, tag_key_list))
     upload_tasks.append((org_resource_tag_value_data, "data/org_resource_tag_value_export.json"))
 
-    # Step 10: Cert Manager export
-    logger.info("Step 10 of 13 - Cert manager export")
+    # Step 9: Cert Manager export
+    logger.info("Step 9 of 12 - Cert manager export")
     certmanager_data = json.loads(certmanager_export(certmanager_resource_id))
     upload_tasks.append((certmanager_data, "data/certmanager_export.json"))
 
-    # Step 11: 366 days Breakglass Account auth data export
-    logger.info("Step 11 of 13 - GCP Breakglass User Auth data export")
+    # Step 10: 366 days Breakglass Account auth data export
+    logger.info("Step 10 of 12 - GCP Breakglass User Auth data export")
     breakglass_auth_data = json.loads(breakglass_auth_export(366, breakglass_user_emails))
     upload_tasks.append((breakglass_auth_data, "data/breakglass_auth_data.json"))
 
-    # Step 12: Project profile tag data
-    logger.info("Step 12 of 13 - Project Override Profile tag export")
+    # Step 11: Project profile tag data
+    logger.info("Step 11 of 12 - Project Override Profile tag export")
     org_project_tag_data = json.loads(org_project_profile_tag_export(asset_parent, project_profile_tag_key_list))
     upload_tasks.append((org_project_tag_data, "data/org_project_tag_data.json"))
 
-    # def read_file(bucket_name, source_blob_name):
-    #     try:
-    #         client = storage.Client(credentials=credentials, project=project_id)
-    #         bucket = client.bucket(bucket_name)
-    #         blob = bucket.blob(source_blob_name)
-    #         json_string = blob.download_as_text()
-    #         content = json.loads(json_string)
-    #         return content
-    #     except Exception as e:
-    #         logger.error (f"Error dowloading file{e}")
-    #         return None
-    # additional_file = read_file(bucket_name, "data/extra.json")
-
-
-    # # Step 13: Compile final data
-    logger.info("Step 13 of 13 - Compiling final data")
-    final_list = asset_data + scc_data + logger_data + gcs_folder_data + essentialcontacts_data + ws_user_data + user_auth_data + org_admin_group_member_data + org_resource_tag_value_data + certmanager_data + breakglass_auth_data + org_project_tag_data
+    # # Step 12: Compile final data
+    logger.info("Step 12 of 12 - Compiling final data")
+    final_list = asset_data  + logger_data + gcs_folder_data + essentialcontacts_data + ws_user_data + user_auth_data + org_admin_group_member_data + org_resource_tag_value_data + certmanager_data + breakglass_auth_data + org_project_tag_data
     compiled_data = {"input": {"data": final_list}}
     upload_tasks.append((compiled_data, "data/compiled.json"))
 
