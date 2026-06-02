@@ -368,3 +368,22 @@ Generally performed as part of a release, tagging is a simple way of marking the
 ```bash
 git tag -a v1.0 -m "This is GCP CaC v1.0"
 ```
+
+## Managing Dependencies
+
+To ensure deterministic builds Python dependencies are pinned locally before committing to the repository. Do not modify `requirements.txt` manually.
+
+Run the following command to update the lockfile:
+
+```bash
+uv pip compile requirements.in -o requirements.txt --generate-hashes --exclude-newer "7 days" --upgrade
+
+```
+
+### Parameter Breakdown
+
+* **`requirements.in`**: The source file containing the top-level, loosely versioned packages. Made to be human readable and editable.
+* **`-o requirements.txt`**: Specifies the target lockfile to output to. Will be consumed by the `Dockerfile` during the build process.
+* **`--generate-hashes`**: Ensures the downloaded artifacts exactly match what was resolved, protecting against compromised registries or tampered packages.
+* **`--exclude-newer "7 days"`**: Ignores package versions uploaded within the last 7 days. This allows new releases time to "bake" publicly, with the hope of mitigating the risk of supply chain attacks.
+* **`--upgrade`**: Forces `uv` to ignore the existing locks in requirements.txt and resolve the absolute latest compatible versions for every package.
