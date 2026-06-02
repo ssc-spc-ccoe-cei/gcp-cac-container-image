@@ -1,27 +1,28 @@
-ARG CLOUD_SDK_VERSION=558.0.0
-ARG PYTHON_VERSION=3.12.12
-ARG ALPINE_VERSION=3.23
+FROM cgr.dev/chainguard/python:latest-dev AS python-build
 
-FROM python:${PYTHON_VERSION}-alpine${ALPINE_VERSION} AS python-build
-COPY ["app.py", "generate_reports.py", "requirements.txt", "guardrail_manifest.json", "./"]
-RUN apk add  --no-cache --virtual .build-deps gcc musl-dev  make automake gcc g++ subversion python3-dev libstdc++ 
-
-RUN pip install --upgrade pip setuptools wheel pyinstaller && \
-    pip install --no-cache-dir -r requirements.txt && \
-    pyinstaller app.py --onefile -s -n cac-app --add-data "guardrail_manifest.json:." && \
-    apk del .build-deps gcc musl-dev  make automake gcc g++ subversion python3-dev libstdc++ && \
-    pip uninstall -r requirements.txt -y
-
-FROM gcr.io/google.com/cloudsdktool/cloud-sdk:${CLOUD_SDK_VERSION}-alpine
-
-RUN addgroup  cac-user \
-    && adduser cac-user -D -G cac-user  \
-    && mkdir app && chown cac-user:cac-user app
+ENV PYTHONDONTWRITEBYTECODE=1 \
+  PYTHONUNBUFFERED=1 \
+  PIP_NO_CACHE_DIR=1 \
+  PATH="/app/venv/bin:$PATH"
 
 WORKDIR /app
 
-COPY --from=python-build --chown=cac-user /dist/cac-app .
+COPY requirements.txt ./
+RUN python -m venv /app/venv && \
+  pip install --no-cache-dir -r requirements.txt
 
-USER cac-user
-ENV PORT=8080
-CMD [ "/app/cac-app"]
+FROM cgr.dev/chainguard/python:latest
+
+WORKDIR /app
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+  PYTHONUNBUFFERED=1 \
+  PORT=8080 \
+  PATH="/app/venv/bin:${PATH}"
+
+COPY --from=python-build /app/venv /app/venv
+COPY ["app.py", "generate_reports.py", "guardrail_manifest.json", "/app/"]
+
+EXPOSE 8080
+
+ENTRYPOINT ["python", "app.py"]
