@@ -11,6 +11,7 @@ from googleapiclient.discovery import build
 import concurrent.futures
 import threading
 
+import sys
 from flask import Flask, jsonify
 import json
 from marshmallow import Schema, fields
@@ -38,7 +39,7 @@ logger.addHandler(handler)
 logger.setLevel(logging.INFO)
 
 # Environment configurations
-port = int(os.environ.get("PORT", 8080))
+port = int(os.environ.get("PORT", 8080))    
 profile_level = os.environ['GC_PROFILE']
 bucket_name = os.environ['GCS_BUCKET']
 project = os.environ['GCP_PROJECT']
@@ -59,7 +60,10 @@ breakglass_user_emails_str = os.environ.get('BREAKGLASS_USER_EMAILS', '["breakgl
 breakglass_user_emails = json.loads(breakglass_user_emails_str)
 
 
-credentials, project_id = google.auth.default()
+try:
+    credentials, project_id = google.auth.default()
+except Exception:
+    credentials, project_id = None, None
 
 certmanager_resource_id = f"projects/{project_id}/locations/global"
 
@@ -89,8 +93,6 @@ gcs_folders = [
 ]
 
 gcs_folder_objects = []
-
-credentials, project_id = google.auth.default()
 
 logger_export_adminapis_admin = (
     f'logName="organizations/{org_id}/logs/cloudaudit.googleapis.com%2Factivity"'
@@ -735,6 +737,51 @@ def org_project_profile_tag_export(asset_parent, project_profile_tag_key_list):
     return json.dumps(tagged_projects_list, separators=(',', ':'))
 
 # Main API endpoint
+def process_results(response_data, bucket=None, local_save=False):
+    """Processes OPA results by applying schema validation and generating output files.
+
+    Args:
+        response_data: Raw JSON response from the OPA server (dict)
+        bucket: Target GCS bucket name for uploads (string)
+        local_save: Whether to save results to local files instead of GCS (boolean)
+
+    Returns:
+        List of formatted finding objects, or None if the response is invalid
+    """
+    try:
+        filtered_json_objects = response_data['result']
+    except KeyError:
+        logger.error(f"KEYERROR - OPA response did not contain 'result'")
+        return None
+    
+    filtered_json_objects = JSONObjectSchema(many=True).dump(filtered_json_objects)
+
+    # Generate JSON results file
+    json_string = json.dumps(filtered_json_objects, indent=1, separators=(',', ': '))
+    
+    # Generate NDJSON results file - for ingesting into BigQuery
+    ndjson_string = json_to_ndjson(filtered_json_objects)
+    
+    # Generate HTML results file
+    html_report_string = ""
+    try:
+        html_report_string = generate_reports(filtered_json_objects)
+    except Exception as report_error:
+        logger.error(f"Error generating HTML report: {report_error}")
+
+    if local_save:
+        with open(f_name, "w") as f: f.write(json_string)
+        with open(ndf_name, "w") as f: f.write(ndjson_string)
+        with open(report_name, "w") as f: f.write(html_report_string)
+        logger.info(f"Results saved locally to {f_name}, {ndf_name}, {report_name}")
+    elif bucket:
+        upload_string_to_gcs(bucket, json_string, f_name, "application/json")
+        upload_string_to_gcs(bucket, ndjson_string, ndf_name, "application/x-ndjson")
+        if html_report_string:
+            upload_string_to_gcs(bucket, html_report_string, report_name, "text/html")
+            
+    return filtered_json_objects
+
 @app.route('/', methods=['GET'])
 def upload_json():
     logger.info("Starting CaC Compliance Evaluation")
@@ -817,29 +864,7 @@ def upload_json():
     client = httpx.Client(http2=True)
     response = client.post("http://localhost:8181/v1/data/main/guardrail", json=compiled_data, timeout=2200.0)
     if 200 <= response.status_code < 300:
-        response_data = response.json()
-        try:
-            filtered_json_objects = response_data['result']
-        except KeyError:
-            logger.info(f"KEYERROR - NO RESPONSE_DATA")
-        
-        filtered_json_objects = JSONObjectSchema(many=True).dump(filtered_json_objects)
-
-        # Generate JSON results file
-        json_string = json.dumps(filtered_json_objects, indent=1, separators=(',', ': '))
-        upload_string_to_gcs(bucket_name, json_string, f_name, "application/json")
-
-        # Generate NDJSON results file - for ingesting into BigQuery
-        ndjson_string = json_to_ndjson(filtered_json_objects)
-        upload_string_to_gcs(bucket_name, ndjson_string, ndf_name, "application/x-ndjson")
-        
-        # Generate HTML results file
-        try:
-            html_report_string = generate_reports(filtered_json_objects)
-            upload_string_to_gcs(bucket_name, html_report_string, report_name, "text/html")
-        except Exception as report_error:
-            logger.error(f"Error generating HTML report: {report_error}")
-
+        process_results(response.json(), bucket=bucket_name)
         logger.info("CaC Evaluation Complete")
     else:
         logger.error(f"OPA Evaluation failed: {response.status_code}")
@@ -859,6 +884,21 @@ def upload_json():
 # MAIN FUNCTION
 #----------------------------------------
 if __name__ == '__main__':
+    if len(sys.argv) > 1 and sys.argv[1] == '--local':
+        # Local evaluation mode
+        if len(sys.argv) < 3:
+            print("Usage: python app.py --local <path_to_compiled.json>")
+            sys.exit(1)
+        
+        compiled_file = sys.argv[2]
+        logger.info(f"Running local evaluation using {compiled_file}")
+        with open(compiled_file, 'r') as f:
+            data = json.load(f)
+        
+        response = requests.post("http://localhost:8181/v1/data/main/guardrail", json=data)
+        process_results(response.json(), local_save=True)
+        sys.exit(0)
+
     # Use Hypercorn to serve the Flask app with HTTP/2 support
     config = Config()
     config.bind = [f"0.0.0.0:{port}"]
