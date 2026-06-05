@@ -1,61 +1,113 @@
 {
   "01": {
-    "0102": "MFA Enforcement",
-    "03": "Global Admins count",
-    "04": "User account Monitoring and Auditing",
-    "05": "Suspicious Activity Alerts",
-    "06": "Dedicated Admin accounts"
+    "name": "Protect Root / Global Admins Account",
+    "validations": {
+      "0102": "MFA Enforcement",
+      "03": "Global Admins count",
+      "04": "User account Monitoring and Auditing",
+      "05": "Suspicious Activity Alerts",
+      "06": "Dedicated Admin accounts"
+    },
+    "recommended_for_profiles": []
   },
   "02": {
-    "01": "Access Configuration and Policies",
-    "02": "Authorization Mechanisms",
-    "03": "Role Assignment Reviews",
-    "05": "Ensure default passwords have been changed for built-in accounts",
-    "06": "Password Policy Implementation",
-    "07": "Ensure account lockout policies and machanisms are in place",
-    "08": "Guest User Access"
+    "name": "Management of Administrative Privileges",
+    "validations": {
+      "01": "Access Configuration and Policies",
+      "02": "Authorization Mechanisms",
+      "03": "Role Assignment Reviews",
+      "05": "Ensure default passwords have been changed for built-in accounts",
+      "06": "Password Policy Implementation",
+      "07": "Ensure account lockout policies and machanisms are in place",
+      "08": "Guest User Access"
+    },
+    "recommended_for_profiles": []
   },
   "03": {
-    "01": "Endpoint Management - Allowed Policy Member Domains and User Source IP Constraints"
+    "name": "Cloud Console Access",
+    "validations": {
+      "01": "Endpoint Management - Allowed Policy Member Domains and User Source IP Constraints"
+    },
+    "recommended_for_profiles": ["1"]
   },
   "04": {
-    "01": "Enterprise Monitoring Accounts",
-    "02": "Suspicious Activity Alerts"
+    "name": "Enterprise Monitoring Accounts",
+    "validations": {
+      "01": "Enterprise Monitoring Accounts",
+      "02": "Suspicious Activity Alerts"
+    },
+    "recommended_for_profiles": []
   },
   "05": {
-    "01": "Data Location Restriction Policy"
+    "name": "Data Location",
+    "validations": {
+      "01": "Data Location Restriction Policy"
+    },
+    "recommended_for_profiles": ["1", "2"]
   },
   "06": {
-    "01": "Encryption of Data at Rest",
-    "02": "Cryptographic Algorithms"
+    "name": "Protection of Data-at-Rest",
+    "validations": {
+      "01": "Encryption of Data at Rest",
+      "02": "Cryptographic Algorithms"
+    },
+    "recommended_for_profiles": ["1", "2"]
   },
   "07": {
-    "0102": "Protection of Data-in-Transit",
-    "03": "Certificates from Approved CA Issuers"
+    "name": "Protection of Data-in-Transit",
+    "validations": {
+      "0102": "Protection of Data-in-Transit",
+      "03": "Certificates from Approved CA Issuers"
+    },
+    "recommended_for_profiles": ["1"]
   },
   "08": {
-    "01": "Network Architecture with Appropriate Segmentation",
-    "02": "Cloud Deployment Guide",
-    "03": "Provider Segmentation Features"
+    "name": "Segment and Separate",
+    "validations": {
+      "01": "Network Architecture with Appropriate Segmentation",
+      "02": "Cloud Deployment Guide",
+      "03": "Provider Segmentation Features"
+    },
+    "recommended_for_profiles": []
   },
   "09": {
-    "04": "Storage Bucket Public Access Prevention"
+    "name": "Network Security Services",
+    "validations": {
+      "04": "Storage Bucket Public Access Prevention"
+    },
+    "recommended_for_profiles": ["1"]
   },
   "10": {
-    "01": "Memorandum of Understanding"
+    "name": "Cyber Defense Services",
+    "validations": {
+      "01": "Memorandum of Understanding"
+    },
+    "recommended_for_profiles": ["1"]
   },
   "11": {
-    "0102": "Essential & Event Logging Enabled",
-    "03": "User account Monitoring and Auditing",
-    "04": "Essential Contacts",
-    "05": "Ensure that logs are collected in an appropriate timezone",
-    "06": "Monitoring Use Cases for Cloud Platform"
+    "name": "Logging and Monitoring",
+    "validations": {
+      "0102": "Essential & Event Logging Enabled",
+      "03": "User account Monitoring and Auditing",
+      "04": "Essential Contacts",
+      "05": "Ensure that logs are collected in an appropriate timezone",
+      "06": "Monitoring Use Cases for Cloud Platform"
+    },
+    "recommended_for_profiles": ["1"]
   },
   "12": {
-    "01": "Third Party Marketplace Restrictions"
+    "name": "Configuration of Cloud Marketplaces",
+    "validations": {
+      "01": "Third Party Marketplace Restrictions"
+    },
+    "recommended_for_profiles": []
   },
   "13": {
-    "01": "Emergency Account Procedure",
-    "04": "Deptartmental CIO Approval of Emergency Account Procedure"
+    "name": "Plan for Continuity",
+    "validations": {
+      "01": "Emergency Account Procedure",
+      "04": "Deptartmental CIO Approval of Emergency Account Procedure"
+    },
+    "recommended_for_profiles": ["1"]
   }
 }
