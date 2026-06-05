@@ -32,6 +32,10 @@ DATA_MISSING_TEXT_COLOR = "#ffffff"
 DATA_MISSING_BACKGROUND_COLOR = "#6f42c1"
 DATA_MISSING_BORDER_COLOR = "#5a32a3"
 
+NA_TEXT_COLOR = "#6c757d"
+NA_BACKGROUND_COLOR = "#e9ecef"
+NA_BORDER_COLOR = "#dee2e6"
+
 BODY_BACKGROUND_COLOR = "#f4f6f8"
 CONTAINER_BACKGROUND_COLOR = "#ffffff"
 TEXT_COLOR = "#333333"
@@ -65,6 +69,7 @@ tr:hover {{ background-color: {TABLE_HOVER_BACKGROUND_COLOR}; }}
 .status-NON-COMPLIANT {{ color: {NON_COMPLIANT_TEXT_COLOR}; background-color: {NON_COMPLIANT_BACKGROUND_COLOR}; border: 1px solid {NON_COMPLIANT_BORDER_COLOR}; }}
 .status-PENDING {{ color: {PENDING_TEXT_COLOR}; background-color: {PENDING_BACKGROUND_COLOR}; border: 1px solid {PENDING_BORDER_COLOR}; }}
 .status-DATA-MISSING {{ color: {DATA_MISSING_TEXT_COLOR}; background-color: {DATA_MISSING_BACKGROUND_COLOR}; border: 1px solid {DATA_MISSING_BORDER_COLOR}; }}
+.status-NON-APPLICABLE {{ color: {NA_TEXT_COLOR}; background-color: {NA_BACKGROUND_COLOR}; border: 1px solid {NA_BORDER_COLOR}; }}
 .asset-name {{ word-break: break-all; font-family: monospace; font-size: 0.9em; color: {MUTED_TEXT_COLOR}; }}
 .group-header {{ background-color: {GROUP_HEADER_BACKGROUND_COLOR}; font-weight: bold; color: {MUTED_TEXT_COLOR}; font-size: 1.1em; }}
 .filter-label {{ font-weight: 600; color: {HEADING_COLOR}; margin-right: 8px; display: inline-block; }}
@@ -202,13 +207,15 @@ def _extract_project(asset_name):
     return match.group(1) if match else None
 
 
-def _build_filters(guardrails, projects=None, include_warn=True, view_prefix=""):
+def _build_filters(guardrails, projects=None, include_warn=True, include_na=False, include_missing=True, view_prefix=""):
     """Build filter control markup for report pages.
 
     Args:
         guardrails: Ordered list of guardrail values
         projects: Optional ordered list of project IDs
         include_warn: Whether to include the warn status filter
+        include_na: Whether to include the non-applicable status filter
+        include_missing: Whether to include the data-missing status filter
         view_prefix: Prefix for element IDs to avoid collisions in unified report
 
     Returns:
@@ -219,12 +226,19 @@ def _build_filters(guardrails, projects=None, include_warn=True, view_prefix="")
         ("compliant", "Compliant"),
         ("noncompliant", "Non-compliant"),
         ("pending", "Pending"),
-        ("datamissing", "Missing"),
     ]
 
     # Only include warn status filter if requested. Only required for detailed reports
     if include_warn:
         status_filters.insert(2, ("warn", "Warn"))
+
+    # Include data-missing filter for summary page only
+    if include_missing:
+        status_filters.append(("datamissing", "Missing"))
+
+    # Include non-applicable filter for summary page when profile has recommended guardrails
+    if include_na:
+        status_filters.append(("nonapplicable", "Non-applicable"))
 
     prefix = f"{view_prefix}-" if view_prefix else ""
 
@@ -364,6 +378,16 @@ def generate_reports(data):
     except (FileNotFoundError, json.JSONDecodeError) as e:
         raise ValueError(f"Failed to load mandatory manifest at {manifest_path}: {e}. Ensure the file exists and is not empty.")
 
+    # Extract profile level from data
+    first = data[0] if data else {}
+    profile_level = str(first.get("profile_level", "N/A"))
+
+    # Build recommended guardrails set based on profile level
+    recommended_guardrails = set()
+    for guardrail_id, guardrail_data in master_manifest.items():
+        if profile_level in guardrail_data.get("recommended_for_profiles", []):
+            recommended_guardrails.add(guardrail_id)
+
     # Grab list of unique guardrails strictly from the manifest
     guardrails_list = sorted(master_manifest.keys())
 
@@ -377,8 +401,8 @@ def generate_reports(data):
     projects_list = sorted(projects_set)
 
     # Build filters with prefixes so IDs are unique in the unified page
-    summary_filters_html = _build_filters(guardrails_list, include_warn=False, view_prefix="summary")
-    detailed_filters_html = _build_filters(guardrails_list, projects_list, include_warn=True, view_prefix="detailed")
+    summary_filters_html = _build_filters(guardrails_list, include_warn=False, include_na=bool(recommended_guardrails), include_missing=True, view_prefix="summary")
+    detailed_filters_html = _build_filters(guardrails_list, projects_list, include_warn=True, include_na=False, include_missing=False, view_prefix="detailed")
 
     # ---------------------------------------------------------
     # SHARED HTML TEMPLATE
@@ -409,7 +433,7 @@ def generate_reports(data):
                 <strong>App Version:</strong> {first.get("app_version", "N/A")} |
                 <strong>Policy Version:</strong> {first.get("policy_version", "N/A")} |
                 <strong>Date:</strong> {first.get("timestamp", "N/A")} |
-                <strong>Profile Level:</strong> {first.get("profile_level", "N/A")}
+                <strong>Profile Level:</strong> {profile_level}
             </div>
     """
 
@@ -441,7 +465,8 @@ def generate_reports(data):
     # Create a status order dictionary to sort items by status - whereby non-compliant items are first
     # Initialize summary_data from the Master Manifest
     summary_data = {}
-    for guardrail, validations in master_manifest.items():
+    for guardrail, guardrail_data in master_manifest.items():
+        validations = guardrail_data.get("validations", {})
         for validation, description in validations.items():
             key = (guardrail, validation)
             summary_data[key] = {
@@ -557,7 +582,11 @@ def generate_reports(data):
     # Iterate through guardrails to calculate compliance status
     # If a validation is NON-COMPLIANT or PENDING, mark it accordingly - otherwise, it's compliant
     for guardrail, validations in guardrails.items():
-      
+        
+        # Skip recommended guardrails - they don't count toward compliance totals
+        if guardrail in recommended_guardrails:
+            continue
+
         has_noncompliant = False
         has_pending = False
         has_missing = False
@@ -604,9 +633,11 @@ def generate_reports(data):
 
     # Create group headers for each guardrail
     for guardrail in sorted(guardrails.keys()):
+        guardrail_name = master_manifest.get(guardrail, {}).get("name", "")
+        header_text = f"Guardrail {guardrail} - {guardrail_name}" if guardrail_name else f"Guardrail {guardrail}"
         summary_section += f"""
                         <tr class="group-header" data-row-type="group-header" data-guardrail="{guardrail}">
-                            <td colspan="4">Guardrail {guardrail}</td>
+                            <td colspan="4">{header_text}</td>
                         </tr>
         """
 
@@ -616,8 +647,11 @@ def generate_reports(data):
         for validation in validations:
             statuses = validation["statuses"]
 
+            # For recommended guardrails, always show as NON-APPLICABLE on summary page
+            if guardrail in recommended_guardrails:
+                status = "Non-applicable"
             # Set the status appropriately based on if either NON-COMPLIANT or PENDING is in the statuses - fallback to compliant
-            if "NON-COMPLIANT" in statuses:
+            elif "NON-COMPLIANT" in statuses:
                 status = "Non-compliant"
             elif "DATA-MISSING" in statuses:
                 status = "Data-missing"
