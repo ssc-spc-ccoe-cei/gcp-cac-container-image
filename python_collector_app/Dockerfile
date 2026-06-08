@@ -1,27 +1,28 @@
-ARG CLOUD_SDK_VERSION=558.0.0
-ARG PYTHON_VERSION=3.12.12
-ARG ALPINE_VERSION=3.23
+FROM cgr.dev/chainguard/python:latest-dev AS python-build
 
-FROM python:${PYTHON_VERSION}-alpine${ALPINE_VERSION} AS python-build
-COPY ["app.py", "requirements.txt", "./"]
-RUN apk add  --no-cache --virtual .build-deps gcc musl-dev  make automake gcc g++ subversion python3-dev libstdc++ 
+ENV PYTHONDONTWRITEBYTECODE=1 \
+  PYTHONUNBUFFERED=1 \
+  PIP_NO_CACHE_DIR=1 \
+  PATH="/home/nonroot/venv/bin:$PATH"
 
-RUN pip install --upgrade pip setuptools wheel pyinstaller && \
-    pip install --no-cache-dir -r requirements.txt && \
-    pyinstaller app.py --onefile -s -n cac-app && \
-    apk del .build-deps gcc musl-dev  make automake gcc g++ subversion python3-dev libstdc++ && \
-    pip uninstall -r requirements.txt -y
+WORKDIR /home/nonroot
 
-FROM gcr.io/google.com/cloudsdktool/cloud-sdk:${CLOUD_SDK_VERSION}-alpine
+COPY --chown=nonroot:nonroot requirements.txt ./
+RUN python -m venv /home/nonroot/venv && \
+  pip install --no-cache-dir -r requirements.txt
 
-RUN addgroup  cac-user \
-    && adduser cac-user -D -G cac-user  \
-    && mkdir app && chown cac-user:cac-user app
+FROM cgr.dev/chainguard/python:latest
 
-WORKDIR /app
+ENV PYTHONDONTWRITEBYTECODE=1 \
+  PYTHONUNBUFFERED=1 \
+  PORT=8080 \
+  PATH="/home/nonroot/venv/bin:${PATH}"
 
-COPY --from=python-build --chown=cac-user /dist/cac-app .
+WORKDIR /home/nonroot
 
-USER cac-user
-ENV PORT=8080
-CMD [ "/app/cac-app"]
+COPY --from=python-build --chown=nonroot:nonroot /home/nonroot/venv /home/nonroot/venv
+COPY --chown=nonroot:nonroot ["app.py", "generate_reports.py", "guardrail_manifest.json", "./"]
+
+EXPOSE 8080
+
+ENTRYPOINT ["python", "app.py"]
