@@ -8,4 +8,7 @@ ARG OPA_VERSION
 RUN wget -q -O /usr/bin/opa "https://github.com/open-policy-agent/opa/releases/download/v${OPA_VERSION}/opa_linux_amd64_static" && \
     chmod +x /usr/bin/opa
 
+# Switch context to the non-root user
+USER cloudsdk
+
 CMD ["/bin/bash"]
