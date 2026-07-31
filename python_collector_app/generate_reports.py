@@ -61,7 +61,7 @@ h1 {{ color: {HEADING_COLOR}; border-bottom: 2px solid {BORDER_LIGHT_COLOR}; pad
 .summary {{ margin: 20px 0; padding: 15px; background-color: {SUMMARY_BACKGROUND_COLOR}; border-left: 4px solid {SUMMARY_BORDER_COLOR}; border-radius: 4px; }}
 table {{ width: 100%; border-collapse: collapse; margin-top: 20px; }}
 th, td {{ padding: 12px 15px; border-bottom: 1px solid {TABLE_BORDER_COLOR}; text-align: left; vertical-align: middle; }}
-th {{ background-color: {TABLE_HEADER_BACKGROUND_COLOR}; font-weight: 600; color: {HEADING_COLOR}; }}
+th {{ background-color: {TABLE_HEADER_BACKGROUND_COLOR}; font-weight: 600; color: {HEADING_COLOR}; position: sticky; top: 0; z-index: 2; }}
 tr:hover {{ background-color: {TABLE_HOVER_BACKGROUND_COLOR}; }}
 .status-badge {{ display: inline-block; padding: 6px 12px; border-radius: 12px; font-size: 0.85em; font-weight: bold; text-align: center; min-width: 80px; }}
 .status-WARN {{ color: {WARN_TEXT_COLOR}; background-color: {WARN_BACKGROUND_COLOR}; border: 1px solid {WARN_BORDER_COLOR}; }}
@@ -79,6 +79,25 @@ tr:hover {{ background-color: {TABLE_HOVER_BACKGROUND_COLOR}; }}
 .filter-break {{ display: block; height: 0; margin-bottom: 12px; }}
 .filter-dropdown {{ padding: 6px 12px; border: 1px solid {FILTER_BORDER_COLOR}; border-radius: 6px; background: {FILTER_BACKGROUND_COLOR}; font-size: 0.9em; color: {HEADING_COLOR}; cursor: pointer; min-width: 200px; }}
 .filter-dropdown:focus {{ outline: none; border-color: {FILTER_ACTIVE_COLOR}; box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2); }}
+.project-select {{ position: relative; display: inline-block; min-width: 220px; vertical-align: middle; }}
+.project-select-toggle {{ width: 100%; text-align: left; padding: 6px 12px; border: 1px solid {FILTER_BORDER_COLOR}; border-radius: 6px; background: {FILTER_BACKGROUND_COLOR}; font-size: 0.9em; color: {HEADING_COLOR}; cursor: pointer; }}
+.project-select-toggle::after {{ content: "\\25BC"; float: right; font-size: 0.7em; margin-left: 8px; opacity: 0.6; }}
+.project-select-toggle:disabled {{ cursor: default; opacity: 0.7; color: {MUTED_TEXT_COLOR}; font-style: italic; }}
+.project-select-toggle::after {{ content: ""; }}
+.project-select-toggle:focus {{ outline: none; border-color: {FILTER_ACTIVE_COLOR}; box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2); }}
+.project-select-panel {{ position: absolute; z-index: 20; top: calc(100% + 4px); left: 0; min-width: 100%; max-height: 260px; overflow-y: auto; background: {CONTAINER_BACKGROUND_COLOR}; border: 1px solid {FILTER_BORDER_COLOR}; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.12); padding: 8px; }}
+.project-select-panel[hidden] {{ display: none; }}
+.project-select-panel-header {{ display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 4px 6px 8px; border-bottom: 1px solid {BORDER_LIGHT_COLOR}; margin-bottom: 6px; }}
+.project-select-panel-count {{ font-size: 0.8em; color: {MUTED_TEXT_COLOR}; white-space: nowrap; }}
+.project-select-clear {{ padding: 3px 10px; border: 1px solid {FILTER_BORDER_COLOR}; border-radius: 6px; background: {FILTER_BACKGROUND_COLOR}; font-size: 0.8em; color: {HEADING_COLOR}; cursor: pointer; }}
+.project-select-clear:hover {{ background: {FILTER_ACTIVE_COLOR}; color: {CONTAINER_BACKGROUND_COLOR}; border-color: {FILTER_ACTIVE_COLOR}; }}
+.project-select-search {{ width: 100%; box-sizing: border-box; padding: 5px 8px; margin-bottom: 6px; border: 1px solid {FILTER_BORDER_COLOR}; border-radius: 6px; font-size: 0.85em; color: {TEXT_COLOR}; }}
+.project-select-search:focus {{ outline: none; border-color: {FILTER_ACTIVE_COLOR}; box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2); }}
+.project-select-option {{ display: block; padding: 5px 6px; font-size: 0.9em; color: {TEXT_COLOR}; cursor: pointer; border-radius: 4px; white-space: nowrap; }}
+.project-select-option:hover {{ background: {TABLE_HOVER_BACKGROUND_COLOR}; }}
+.project-select-option input {{ margin-right: 8px; vertical-align: middle; }}
+.project-select-option[hidden] {{ display: none; }}
+.project-select-no-match {{ padding: 6px; font-size: 0.85em; font-style: italic; color: {MUTED_TEXT_COLOR}; }}
 .content-wrapper {{ display: flex; gap: 30px; align-items: flex-start; }}
 .table-section {{ flex: 1; min-width: 0; }}
 .pie-chart-container {{ flex-shrink: 0; width: 250px; text-align: center; background: {TABLE_HEADER_BACKGROUND_COLOR}; padding: 20px; border-radius: 8px; border: 1px solid {GROUP_HEADER_BACKGROUND_COLOR}; position: sticky; top: 20px; }}
@@ -261,13 +280,30 @@ def _build_filters(guardrails, projects=None, include_warn=True, include_na=Fals
     controls.append('</select>')
     controls.append('<div class="filter-break"></div>')
 
-    if projects:
+    # If projects are found, add a dropdown menu with ability to filter on search
+    if projects is not None:
         controls.append('<span class="filter-label">Project Filter:</span>')
-        controls.append(f'<select id="{prefix}project-filter" class="filter-dropdown">')
-        controls.append('<option value="">All Projects</option>')
-        for project in projects:
-            controls.append(f'<option value="{project}">{project}</option>')
-        controls.append('</select>')
+        if projects:
+            controls.append(f'<div class="project-select" id="{prefix}project-filter">')
+            controls.append(f'<button type="button" class="project-select-toggle" id="{prefix}project-toggle" aria-haspopup="true" aria-expanded="false">All Projects</button>')
+            controls.append(f'<div class="project-select-panel" id="{prefix}project-panel" hidden>')
+            controls.append('<div class="project-select-panel-header">')
+            controls.append(f'<span class="project-select-panel-count" id="{prefix}project-count">All Projects</span>')
+            controls.append(f'<button type="button" class="project-select-clear" id="{prefix}project-clear">Clear</button>')
+            controls.append('</div>')
+            controls.append(f'<input type="text" class="project-select-search" id="{prefix}project-search" placeholder="Search projects..." autocomplete="off">')
+            controls.append(f'<div class="project-select-options" id="{prefix}project-options">')
+            for project in projects:
+                controls.append(f'<label class="project-select-option"><input type="checkbox" class="project-select-checkbox" value="{project}">{project}</label>')
+            controls.append(f'<div class="project-select-no-match" id="{prefix}project-nomatch" hidden>No matching projects</div>')
+            controls.append('</div>')
+            controls.append('</div>')
+            controls.append('</div>')
+      # If no project are found, disable the dropdown menu and show the user no project-scopd assets were found
+        else:
+            controls.append('<div class="project-select">')
+            controls.append('<button type="button" class="project-select-toggle project-select-toggle-empty" disabled>No project-scoped assets</button>')
+            controls.append('</div>')
         controls.append('<div class="filter-break"></div>')
     controls.append('</div>')
 
@@ -299,9 +335,14 @@ def _build_filter_script(view_prefix="", view_id=""):
                     }}
 
                     var guardrailFilter = document.getElementById("{prefix}guardrail-filter");
-                    var projectFilter = document.getElementById("{prefix}project-filter");
+                    var projectPanel = document.getElementById("{prefix}project-panel");
                     var selectedGuardrail = guardrailFilter ? guardrailFilter.value : "";
-                    var selectedProject = projectFilter ? projectFilter.value : "";
+                    var selectedProjects = [];
+                    if (projectPanel) {{
+                        projectPanel.querySelectorAll("input.project-select-project-option:checked").forEach(function(cb) {{
+                            selectedProjects.push(cb.value);
+                        }});
+                    }}
 
                     var rows = viewSection.querySelectorAll("table tbody tr");
                     var visibleByGuardrail = {{}};
@@ -318,7 +359,7 @@ def _build_filter_script(view_prefix="", view_id=""):
 
                         var statusMatches = selectedStatus === "all" || rowStatus === selectedStatus;
                         var guardrailMatches = !selectedGuardrail || rowGuardrail === selectedGuardrail;
-                        var projectMatches = !selectedProject || rowProject === selectedProject;
+                        var projectMatches = selectedProjects.length === 0 || selectedProjects.indexOf(rowProject) !== -1;
                         var visible = statusMatches && guardrailMatches && projectMatches;
 
                         row.style.display = visible ? "" : "none";
@@ -345,11 +386,96 @@ def _build_filter_script(view_prefix="", view_id=""):
                     guardrailFilter.addEventListener("change", applyFilters);
                 }}
 
-                var projectFilter = document.getElementById("{prefix}project-filter");
-                if (projectFilter) {{
-                    projectFilter.addEventListener("change", applyFilters);
+                var projectToggle = document.getElementById("{prefix}project-toggle");
+                var projectPanel = document.getElementById("{prefix}project-panel");
+                var projectCount = document.getElementById("{prefix}project-count");
+                var projectClear = document.getElementById("{prefix}project-clear");
+
+                function updateProjectLabel() {{
+                    if (!projectPanel) return;
+                    var checked = projectPanel.querySelectorAll("input.project-select-checkbox:checked");
+                    var text;
+                    if (checked.length === 0) {{
+                        text = "All Projects";
+                    }} else if (checked.length === 1) {{
+                        text = checked[0].value;
+                    }} else {{
+                        text = checked.length + " projects selected";
+                    }}
+                    if (projectToggle) projectToggle.textContent = text;
+                    if (projectCount) projectCount.textContent = text;
                 }}
 
+                if (projectToggle && projectPanel) {{
+                    projectToggle.addEventListener("click", function(e) {{
+                        e.stopPropagation();
+                        var isHidden = projectPanel.hasAttribute("hidden");
+                        if (isHidden) {{
+                            projectPanel.removeAttribute("hidden");
+                            projectToggle.setAttribute("aria-expanded", "true");
+                        }} else {{
+                            projectPanel.setAttribute("hidden", "");
+                            projectToggle.setAttribute("aria-expanded", "false");
+                        }}
+                    }});
+                    projectPanel.addEventListener("click", function(e) {{ e.stopPropagation(); }});
+                    document.addEventListener("click", function() {{
+                        projectPanel.setAttribute("hidden", "");
+                        projectToggle.setAttribute("aria-expanded", "false");
+                    }});
+                    projectPanel.querySelectorAll("input.project-select-checkbox").forEach(function(cb) {{
+                        cb.addEventListener("change", function() {{
+                            updateProjectLabel();
+                            applyFilters();
+                        }});
+                    }});
+                }}
+
+                if (projectClear && projectPanel) {{
+                    projectClear.addEventListener("click", function(e) {{
+                        e.stopPropagation();
+                        projectPanel.querySelectorAll("input.project-select-checkbox:checked").forEach(function(cb) {{
+                            cb.checked = false;
+                        }});
+                        updateProjectLabel();
+                        applyFilters();
+                    }});
+                }}
+
+                var projectSearch = document.getElementById("{prefix}project-search");
+                var projectNoMatch = document.getElementById("{prefix}project-nomatch");
+                if (projectSearch && projectPanel) {{
+                    projectSearch.addEventListener("input", function() {{
+                        var term = projectSearch.value.trim().toLowerCase();
+                        var anyVisible = false;
+                        projectPanel.querySelectorAll(".project-select-option").forEach(function(option) {{
+                            var matches = option.textContent.toLowerCase().indexOf(term) !== -1;
+                            if (matches) {{
+                                option.removeAttribute("hidden");
+                                anyVisible = true;
+                            }} else {{
+                                option.setAttribute("hidden", "");
+                            }}
+                        }});
+                        if (projectNoMatch) {{
+                            if (anyVisible) {{
+                                projectNoMatch.setAttribute("hidden", "");
+                            }} else {{
+                                projectNoMatch.removeAttribute("hidden");
+                            }}
+                        }}
+                    }});
+                    // Focus the search box when the dropdown opens
+                    if (projectToggle) {{
+                        projectToggle.addEventListener("click", function() {{
+                            if (!projectPanel.hasAttribute("hidden")) {{
+                                projectSearch.focus();
+                            }}
+                        }});
+                    }}
+                }}
+
+                updateProjectLabel();
                 applyFilters();
             }})();
         </script>
