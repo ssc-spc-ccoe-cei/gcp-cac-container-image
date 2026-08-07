@@ -70,6 +70,18 @@ tr:hover {{ background-color: {TABLE_HOVER_BACKGROUND_COLOR}; }}
 .status-PENDING {{ color: {PENDING_TEXT_COLOR}; background-color: {PENDING_BACKGROUND_COLOR}; border: 1px solid {PENDING_BORDER_COLOR}; }}
 .status-DATA-MISSING {{ color: {DATA_MISSING_TEXT_COLOR}; background-color: {DATA_MISSING_BACKGROUND_COLOR}; border: 1px solid {DATA_MISSING_BORDER_COLOR}; }}
 .status-NON-APPLICABLE {{ color: {NA_TEXT_COLOR}; background-color: {NA_BACKGROUND_COLOR}; border: 1px solid {NA_BORDER_COLOR}; }}
+.status-cell {{ position: relative; z-index: 1; white-space: nowrap; }}
+.status-cell:hover, .status-cell:focus-within {{ z-index: 100; }}
+.profile-override-gutter {{ position: absolute; z-index: 101; top: 50%; right: calc(100% - 10px); width: 28px; transform: translateY(-50%); display: flex; align-items: center; justify-content: flex-end; }}
+.profile-override {{ position: relative; display: inline-flex; align-items: center; }}
+.profile-override-trigger {{ appearance: none; border: 1px solid #7c3aed; border-radius: 999px; padding: 3px 7px; background: #f3e8ff; color: #5b21b6; font: inherit; font-size: 0.72em; font-weight: 700; line-height: 1.2; cursor: help; }}
+.profile-override-trigger:hover, .profile-override-trigger:focus-visible {{ background: #7c3aed; color: #ffffff; outline: none; box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.2); }}
+.profile-override-tooltip {{ position: absolute; z-index: 102; top: calc(100% + 9px); left: 0; width: 290px; padding: 12px 14px; border: 1px solid #c4b5fd; border-radius: 8px; background: #ffffff; color: {TEXT_COLOR}; box-shadow: 0 8px 24px rgba(30, 41, 59, 0.18); font-size: 0.82rem; font-weight: 400; line-height: 1.45; text-align: left; white-space: normal; opacity: 0; visibility: hidden; transform: translateY(-4px); transition: opacity 120ms ease, transform 120ms ease, visibility 120ms ease; pointer-events: none; }}
+.profile-override-tooltip::before {{ content: ""; position: absolute; top: -6px; left: 14px; width: 10px; height: 10px; border-top: 1px solid #c4b5fd; border-left: 1px solid #c4b5fd; background: #ffffff; transform: rotate(45deg); }}
+.profile-override:hover .profile-override-tooltip, .profile-override:focus-within .profile-override-tooltip {{ opacity: 1; visibility: visible; transform: translateY(0); }}
+.profile-override-title {{ display: block; margin-bottom: 6px; color: #5b21b6; font-weight: 700; }}
+.profile-override-change {{ display: block; margin-bottom: 5px; }}
+.profile-override-scope {{ display: block; color: {MUTED_TEXT_COLOR}; word-break: break-word; }}
 .asset-name {{ word-break: break-all; font-family: monospace; font-size: 0.9em; color: {MUTED_TEXT_COLOR}; }}
 .group-header {{ background-color: {GROUP_HEADER_BACKGROUND_COLOR}; font-weight: bold; color: {MUTED_TEXT_COLOR}; font-size: 1.1em; }}
 .filter-label {{ font-weight: 600; color: {HEADING_COLOR}; margin-right: 8px; display: inline-block; }}
@@ -226,6 +238,28 @@ def _extract_project(asset_name):
     return match.group(1) if match else None
 
 
+def _build_profile_override_tooltip(item):
+    """Build a helpful tooltip for a result overridden by a project-level profile."""
+
+    global_profile = str(item.get("profile_level", "")).strip()
+    project_profile = str(item.get("proj_profile", "")).strip()
+
+    # The presence of proj_profile indicates that the project profile override was applied.
+    if not project_profile:
+        return ""
+
+    return (
+        '<span class="profile-override">'
+        f'<button type="button" class="profile-override-trigger">P{project_profile}</button>'
+        '<span class="profile-override-tooltip">'
+        '<span class="profile-override-title">Project-level profile override applied</span>'
+        f'<span class="profile-override-change">Organization profile level: <strong>{global_profile or "N/A"}</strong></span>'
+        f'<span class="profile-override-change">Project profile level: <strong>{project_profile}</strong></span>'
+        '</span>'
+        '</span>'
+    )
+
+
 def _build_filters(guardrails, projects=None, include_warn=True, include_na=False, include_missing=True, view_prefix=""):
     """Build filter control markup for report pages.
 
@@ -339,7 +373,7 @@ def _build_filter_script(view_prefix="", view_id=""):
                     var selectedGuardrail = guardrailFilter ? guardrailFilter.value : "";
                     var selectedProjects = [];
                     if (projectPanel) {{
-                        projectPanel.querySelectorAll("input.project-select-project-option:checked").forEach(function(cb) {{
+                        projectPanel.querySelectorAll("input.project-select-checkbox:checked").forEach(function(cb) {{
                             selectedProjects.push(cb.value);
                         }});
                     }}
@@ -638,10 +672,13 @@ def generate_reports(data):
         status_group = str(status).lower().replace("-", "")
         guardrail = item.get("guardrail", "Unknown")
         project = _extract_project(item.get("asset_name", ""))
+
+        # Logic to check if project override profile is present
+        profile_override_tooltip = _build_profile_override_tooltip(item)
         
         detailed_section += f"""
                     <tr data-row-type="item" data-status-group="{status_group}" data-guardrail="{guardrail}" data-project="{project}">
-                        <td><span class="status-badge status-{status}">{status}</span></td>
+                        <td class="status-cell"><span class="profile-override-gutter">{profile_override_tooltip}</span><span class="status-badge status-{status}">{status}</span></td>
                         <td>{item.get("guardrail", "")}</td>
                         <td>{item.get("validation", "")}</td>
                         <td>{item.get("description", "")}</td>
