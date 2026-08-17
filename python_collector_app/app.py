@@ -653,7 +653,8 @@ def certmanager_export(certmanager_resource_id):
     return json.dumps(certificates_list, separators=(',', ':'))
 
 def breakglass_auth_export(days, breakglass_user_emails):
-    """Retrieves Organizationa authentication logs in for breakglass user accounts in the last X days
+    """Retrieve successful breakglass account logins from the last X days.
+
     Args:
         days (int): number of days to filter logs
         breakglass_user_emails (list(string)): breakglass user emails
@@ -661,45 +662,55 @@ def breakglass_auth_export(days, breakglass_user_emails):
     Returns:
         A list of authentication log entries (if any)
     """
+    if not breakglass_user_emails:
+        logger.info("No breakglass user emails configured")
+        return json.dumps([])
+
     auth_log_client = google.cloud.logging.Client()
     now = datetime.now(timezone.utc)
     time_days_ago = now - timedelta(days=days)
-    
-    # Build a list of filter strings for each email
-    try:
-        list_of_email_queries = []
 
-        for email in breakglass_user_emails:
-            list_of_email_queries.append(f'protoPayload.authenticationInfo.principalEmail="{email}"')
+    email_queries = [
+        f'protoPayload.authenticationInfo.principalEmail="{email}"'
+        for email in breakglass_user_emails
+    ]
+    all_emails_query = " OR ".join(email_queries)
 
-        all_emails_query = " OR ".join(list_of_email_queries)
+    filter_str = (
+        f'timestamp >= "{time_days_ago.isoformat()}" AND '
+        f'logName="organizations/{org_id}/logs/cloudaudit.googleapis.com%2Fdata_access" AND '
+        'protoPayload.serviceName="login.googleapis.com" AND '
+        'protoPayload.methodName="google.login.LoginService.loginSuccess" AND '
+        f'({all_emails_query})'
+    )
 
-        filter_str = (
-            f'timestamp >= "{time_days_ago.isoformat()}" AND '
-            f'logName="organizations/{org_id}/logs/cloudaudit.googleapis.com%2Factivity" AND '
-            f' ({all_emails_query}) '
-            f'-protoPayload.serviceName="iam.googleapis.com" '
-            f'-protoPayload.serviceName="k8s.io"'
-        )
-    except Exception as e:
-        print(f"Error building filter string: {e}")
-        return json.dumps([])
-        
     asset_parent = f"organizations/{org_id}"
+    breakglass_auth_logs_list = []
 
     try:
         entries = auth_log_client.list_entries(resource_names=[asset_parent], filter_=filter_str)
-    except Exception as e:
-        print(f"Error retrieving logs: {e}")
-        return json.dump([])
-
-    breakglass_auth_logs_list = []
-    try:
         for entry in entries:
-            principal_email = entry.payload['authenticationInfo']['principalEmail']
-            breakglass_auth_logs_list.append({"kind": "logging#breakglass#auth", "principalEmail": principal_email, "timestamp": entry.timestamp.isoformat()})
-    except KeyError:
-        pass
+            payload = entry.payload
+            if not isinstance(payload, dict):
+                continue
+
+            authentication_info = payload.get("authenticationInfo")
+            if not isinstance(authentication_info, dict):
+                continue
+
+            principal_email = authentication_info.get("principalEmail")
+            if not principal_email or entry.timestamp is None:
+                continue
+
+            breakglass_auth_logs_list.append({
+                "kind": "logging#breakglass#auth",
+                "principalEmail": principal_email,
+                "timestamp": entry.timestamp.isoformat()
+            })
+    except Exception:
+        logger.exception("Error retrieving breakglass login logs from Cloud Logging")
+        raise
+
     return json.dumps(breakglass_auth_logs_list, separators=(',', ':'))
 
 # Project profile tag export

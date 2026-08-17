@@ -61,7 +61,7 @@ h1 {{ color: {HEADING_COLOR}; border-bottom: 2px solid {BORDER_LIGHT_COLOR}; pad
 .summary {{ margin: 20px 0; padding: 15px; background-color: {SUMMARY_BACKGROUND_COLOR}; border-left: 4px solid {SUMMARY_BORDER_COLOR}; border-radius: 4px; }}
 table {{ width: 100%; border-collapse: collapse; margin-top: 20px; }}
 th, td {{ padding: 12px 15px; border-bottom: 1px solid {TABLE_BORDER_COLOR}; text-align: left; vertical-align: middle; }}
-th {{ background-color: {TABLE_HEADER_BACKGROUND_COLOR}; font-weight: 600; color: {HEADING_COLOR}; }}
+th {{ background-color: {TABLE_HEADER_BACKGROUND_COLOR}; font-weight: 600; color: {HEADING_COLOR}; position: sticky; top: 0; z-index: 2; }}
 tr:hover {{ background-color: {TABLE_HOVER_BACKGROUND_COLOR}; }}
 .status-badge {{ display: inline-block; padding: 6px 12px; border-radius: 12px; font-size: 0.85em; font-weight: bold; text-align: center; min-width: 80px; }}
 .status-WARN {{ color: {WARN_TEXT_COLOR}; background-color: {WARN_BACKGROUND_COLOR}; border: 1px solid {WARN_BORDER_COLOR}; }}
@@ -70,6 +70,18 @@ tr:hover {{ background-color: {TABLE_HOVER_BACKGROUND_COLOR}; }}
 .status-PENDING {{ color: {PENDING_TEXT_COLOR}; background-color: {PENDING_BACKGROUND_COLOR}; border: 1px solid {PENDING_BORDER_COLOR}; }}
 .status-DATA-MISSING {{ color: {DATA_MISSING_TEXT_COLOR}; background-color: {DATA_MISSING_BACKGROUND_COLOR}; border: 1px solid {DATA_MISSING_BORDER_COLOR}; }}
 .status-NON-APPLICABLE {{ color: {NA_TEXT_COLOR}; background-color: {NA_BACKGROUND_COLOR}; border: 1px solid {NA_BORDER_COLOR}; }}
+.status-cell {{ position: relative; z-index: 1; white-space: nowrap; }}
+.status-cell:hover, .status-cell:focus-within {{ z-index: 100; }}
+.profile-override-gutter {{ position: absolute; z-index: 101; top: 50%; right: calc(100% - 10px); width: 28px; transform: translateY(-50%); display: flex; align-items: center; justify-content: flex-end; }}
+.profile-override {{ position: relative; display: inline-flex; align-items: center; }}
+.profile-override-trigger {{ appearance: none; border: 1px solid #7c3aed; border-radius: 999px; padding: 3px 7px; background: #f3e8ff; color: #5b21b6; font: inherit; font-size: 0.72em; font-weight: 700; line-height: 1.2; cursor: help; }}
+.profile-override-trigger:hover, .profile-override-trigger:focus-visible {{ background: #7c3aed; color: #ffffff; outline: none; box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.2); }}
+.profile-override-tooltip {{ position: absolute; z-index: 102; top: calc(100% + 9px); left: 0; width: 290px; padding: 12px 14px; border: 1px solid #c4b5fd; border-radius: 8px; background: #ffffff; color: {TEXT_COLOR}; box-shadow: 0 8px 24px rgba(30, 41, 59, 0.18); font-size: 0.82rem; font-weight: 400; line-height: 1.45; text-align: left; white-space: normal; opacity: 0; visibility: hidden; transform: translateY(-4px); transition: opacity 120ms ease, transform 120ms ease, visibility 120ms ease; pointer-events: none; }}
+.profile-override-tooltip::before {{ content: ""; position: absolute; top: -6px; left: 14px; width: 10px; height: 10px; border-top: 1px solid #c4b5fd; border-left: 1px solid #c4b5fd; background: #ffffff; transform: rotate(45deg); }}
+.profile-override:hover .profile-override-tooltip, .profile-override:focus-within .profile-override-tooltip {{ opacity: 1; visibility: visible; transform: translateY(0); }}
+.profile-override-title {{ display: block; margin-bottom: 6px; color: #5b21b6; font-weight: 700; }}
+.profile-override-change {{ display: block; margin-bottom: 5px; }}
+.profile-override-scope {{ display: block; color: {MUTED_TEXT_COLOR}; word-break: break-word; }}
 .asset-name {{ word-break: break-all; font-family: monospace; font-size: 0.9em; color: {MUTED_TEXT_COLOR}; }}
 .group-header {{ background-color: {GROUP_HEADER_BACKGROUND_COLOR}; font-weight: bold; color: {MUTED_TEXT_COLOR}; font-size: 1.1em; }}
 .filter-label {{ font-weight: 600; color: {HEADING_COLOR}; margin-right: 8px; display: inline-block; }}
@@ -79,6 +91,25 @@ tr:hover {{ background-color: {TABLE_HOVER_BACKGROUND_COLOR}; }}
 .filter-break {{ display: block; height: 0; margin-bottom: 12px; }}
 .filter-dropdown {{ padding: 6px 12px; border: 1px solid {FILTER_BORDER_COLOR}; border-radius: 6px; background: {FILTER_BACKGROUND_COLOR}; font-size: 0.9em; color: {HEADING_COLOR}; cursor: pointer; min-width: 200px; }}
 .filter-dropdown:focus {{ outline: none; border-color: {FILTER_ACTIVE_COLOR}; box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2); }}
+.project-select {{ position: relative; display: inline-block; min-width: 220px; vertical-align: middle; }}
+.project-select-toggle {{ width: 100%; text-align: left; padding: 6px 12px; border: 1px solid {FILTER_BORDER_COLOR}; border-radius: 6px; background: {FILTER_BACKGROUND_COLOR}; font-size: 0.9em; color: {HEADING_COLOR}; cursor: pointer; }}
+.project-select-toggle::after {{ content: "\\25BC"; float: right; font-size: 0.7em; margin-left: 8px; opacity: 0.6; }}
+.project-select-toggle:disabled {{ cursor: default; opacity: 0.7; color: {MUTED_TEXT_COLOR}; font-style: italic; }}
+.project-select-toggle::after {{ content: ""; }}
+.project-select-toggle:focus {{ outline: none; border-color: {FILTER_ACTIVE_COLOR}; box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2); }}
+.project-select-panel {{ position: absolute; z-index: 20; top: calc(100% + 4px); left: 0; min-width: 100%; max-height: 260px; overflow-y: auto; background: {CONTAINER_BACKGROUND_COLOR}; border: 1px solid {FILTER_BORDER_COLOR}; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.12); padding: 8px; }}
+.project-select-panel[hidden] {{ display: none; }}
+.project-select-panel-header {{ display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 4px 6px 8px; border-bottom: 1px solid {BORDER_LIGHT_COLOR}; margin-bottom: 6px; }}
+.project-select-panel-count {{ font-size: 0.8em; color: {MUTED_TEXT_COLOR}; white-space: nowrap; }}
+.project-select-clear {{ padding: 3px 10px; border: 1px solid {FILTER_BORDER_COLOR}; border-radius: 6px; background: {FILTER_BACKGROUND_COLOR}; font-size: 0.8em; color: {HEADING_COLOR}; cursor: pointer; }}
+.project-select-clear:hover {{ background: {FILTER_ACTIVE_COLOR}; color: {CONTAINER_BACKGROUND_COLOR}; border-color: {FILTER_ACTIVE_COLOR}; }}
+.project-select-search {{ width: 100%; box-sizing: border-box; padding: 5px 8px; margin-bottom: 6px; border: 1px solid {FILTER_BORDER_COLOR}; border-radius: 6px; font-size: 0.85em; color: {TEXT_COLOR}; }}
+.project-select-search:focus {{ outline: none; border-color: {FILTER_ACTIVE_COLOR}; box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2); }}
+.project-select-option {{ display: block; padding: 5px 6px; font-size: 0.9em; color: {TEXT_COLOR}; cursor: pointer; border-radius: 4px; white-space: nowrap; }}
+.project-select-option:hover {{ background: {TABLE_HOVER_BACKGROUND_COLOR}; }}
+.project-select-option input {{ margin-right: 8px; vertical-align: middle; }}
+.project-select-option[hidden] {{ display: none; }}
+.project-select-no-match {{ padding: 6px; font-size: 0.85em; font-style: italic; color: {MUTED_TEXT_COLOR}; }}
 .content-wrapper {{ display: flex; gap: 30px; align-items: flex-start; }}
 .table-section {{ flex: 1; min-width: 0; }}
 .pie-chart-container {{ flex-shrink: 0; width: 250px; text-align: center; background: {TABLE_HEADER_BACKGROUND_COLOR}; padding: 20px; border-radius: 8px; border: 1px solid {GROUP_HEADER_BACKGROUND_COLOR}; position: sticky; top: 20px; }}
@@ -207,6 +238,28 @@ def _extract_project(asset_name):
     return match.group(1) if match else None
 
 
+def _build_profile_override_tooltip(item):
+    """Build a helpful tooltip for a result overridden by a project-level profile."""
+
+    global_profile = str(item.get("profile_level", "")).strip()
+    project_profile = str(item.get("proj_profile", "")).strip()
+
+    # The presence of proj_profile indicates that the project profile override was applied.
+    if not project_profile:
+        return ""
+
+    return (
+        '<span class="profile-override">'
+        f'<button type="button" class="profile-override-trigger">P{project_profile}</button>'
+        '<span class="profile-override-tooltip">'
+        '<span class="profile-override-title">Project-level profile override applied</span>'
+        f'<span class="profile-override-change">Organization profile level: <strong>{global_profile or "N/A"}</strong></span>'
+        f'<span class="profile-override-change">Project profile level: <strong>{project_profile}</strong></span>'
+        '</span>'
+        '</span>'
+    )
+
+
 def _build_filters(guardrails, projects=None, include_warn=True, include_na=False, include_missing=True, view_prefix=""):
     """Build filter control markup for report pages.
 
@@ -261,13 +314,30 @@ def _build_filters(guardrails, projects=None, include_warn=True, include_na=Fals
     controls.append('</select>')
     controls.append('<div class="filter-break"></div>')
 
-    if projects:
+    # If projects are found, add a dropdown menu with ability to filter on search
+    if projects is not None:
         controls.append('<span class="filter-label">Project Filter:</span>')
-        controls.append(f'<select id="{prefix}project-filter" class="filter-dropdown">')
-        controls.append('<option value="">All Projects</option>')
-        for project in projects:
-            controls.append(f'<option value="{project}">{project}</option>')
-        controls.append('</select>')
+        if projects:
+            controls.append(f'<div class="project-select" id="{prefix}project-filter">')
+            controls.append(f'<button type="button" class="project-select-toggle" id="{prefix}project-toggle" aria-haspopup="true" aria-expanded="false">All Projects</button>')
+            controls.append(f'<div class="project-select-panel" id="{prefix}project-panel" hidden>')
+            controls.append('<div class="project-select-panel-header">')
+            controls.append(f'<span class="project-select-panel-count" id="{prefix}project-count">All Projects</span>')
+            controls.append(f'<button type="button" class="project-select-clear" id="{prefix}project-clear">Clear</button>')
+            controls.append('</div>')
+            controls.append(f'<input type="text" class="project-select-search" id="{prefix}project-search" placeholder="Search projects..." autocomplete="off">')
+            controls.append(f'<div class="project-select-options" id="{prefix}project-options">')
+            for project in projects:
+                controls.append(f'<label class="project-select-option"><input type="checkbox" class="project-select-checkbox" value="{project}">{project}</label>')
+            controls.append(f'<div class="project-select-no-match" id="{prefix}project-nomatch" hidden>No matching projects</div>')
+            controls.append('</div>')
+            controls.append('</div>')
+            controls.append('</div>')
+      # If no project are found, disable the dropdown menu and show the user no project-scopd assets were found
+        else:
+            controls.append('<div class="project-select">')
+            controls.append('<button type="button" class="project-select-toggle project-select-toggle-empty" disabled>No project-scoped assets</button>')
+            controls.append('</div>')
         controls.append('<div class="filter-break"></div>')
     controls.append('</div>')
 
@@ -299,9 +369,14 @@ def _build_filter_script(view_prefix="", view_id=""):
                     }}
 
                     var guardrailFilter = document.getElementById("{prefix}guardrail-filter");
-                    var projectFilter = document.getElementById("{prefix}project-filter");
+                    var projectPanel = document.getElementById("{prefix}project-panel");
                     var selectedGuardrail = guardrailFilter ? guardrailFilter.value : "";
-                    var selectedProject = projectFilter ? projectFilter.value : "";
+                    var selectedProjects = [];
+                    if (projectPanel) {{
+                        projectPanel.querySelectorAll("input.project-select-checkbox:checked").forEach(function(cb) {{
+                            selectedProjects.push(cb.value);
+                        }});
+                    }}
 
                     var rows = viewSection.querySelectorAll("table tbody tr");
                     var visibleByGuardrail = {{}};
@@ -318,7 +393,7 @@ def _build_filter_script(view_prefix="", view_id=""):
 
                         var statusMatches = selectedStatus === "all" || rowStatus === selectedStatus;
                         var guardrailMatches = !selectedGuardrail || rowGuardrail === selectedGuardrail;
-                        var projectMatches = !selectedProject || rowProject === selectedProject;
+                        var projectMatches = selectedProjects.length === 0 || selectedProjects.indexOf(rowProject) !== -1;
                         var visible = statusMatches && guardrailMatches && projectMatches;
 
                         row.style.display = visible ? "" : "none";
@@ -345,11 +420,96 @@ def _build_filter_script(view_prefix="", view_id=""):
                     guardrailFilter.addEventListener("change", applyFilters);
                 }}
 
-                var projectFilter = document.getElementById("{prefix}project-filter");
-                if (projectFilter) {{
-                    projectFilter.addEventListener("change", applyFilters);
+                var projectToggle = document.getElementById("{prefix}project-toggle");
+                var projectPanel = document.getElementById("{prefix}project-panel");
+                var projectCount = document.getElementById("{prefix}project-count");
+                var projectClear = document.getElementById("{prefix}project-clear");
+
+                function updateProjectLabel() {{
+                    if (!projectPanel) return;
+                    var checked = projectPanel.querySelectorAll("input.project-select-checkbox:checked");
+                    var text;
+                    if (checked.length === 0) {{
+                        text = "All Projects";
+                    }} else if (checked.length === 1) {{
+                        text = checked[0].value;
+                    }} else {{
+                        text = checked.length + " projects selected";
+                    }}
+                    if (projectToggle) projectToggle.textContent = text;
+                    if (projectCount) projectCount.textContent = text;
                 }}
 
+                if (projectToggle && projectPanel) {{
+                    projectToggle.addEventListener("click", function(e) {{
+                        e.stopPropagation();
+                        var isHidden = projectPanel.hasAttribute("hidden");
+                        if (isHidden) {{
+                            projectPanel.removeAttribute("hidden");
+                            projectToggle.setAttribute("aria-expanded", "true");
+                        }} else {{
+                            projectPanel.setAttribute("hidden", "");
+                            projectToggle.setAttribute("aria-expanded", "false");
+                        }}
+                    }});
+                    projectPanel.addEventListener("click", function(e) {{ e.stopPropagation(); }});
+                    document.addEventListener("click", function() {{
+                        projectPanel.setAttribute("hidden", "");
+                        projectToggle.setAttribute("aria-expanded", "false");
+                    }});
+                    projectPanel.querySelectorAll("input.project-select-checkbox").forEach(function(cb) {{
+                        cb.addEventListener("change", function() {{
+                            updateProjectLabel();
+                            applyFilters();
+                        }});
+                    }});
+                }}
+
+                if (projectClear && projectPanel) {{
+                    projectClear.addEventListener("click", function(e) {{
+                        e.stopPropagation();
+                        projectPanel.querySelectorAll("input.project-select-checkbox:checked").forEach(function(cb) {{
+                            cb.checked = false;
+                        }});
+                        updateProjectLabel();
+                        applyFilters();
+                    }});
+                }}
+
+                var projectSearch = document.getElementById("{prefix}project-search");
+                var projectNoMatch = document.getElementById("{prefix}project-nomatch");
+                if (projectSearch && projectPanel) {{
+                    projectSearch.addEventListener("input", function() {{
+                        var term = projectSearch.value.trim().toLowerCase();
+                        var anyVisible = false;
+                        projectPanel.querySelectorAll(".project-select-option").forEach(function(option) {{
+                            var matches = option.textContent.toLowerCase().indexOf(term) !== -1;
+                            if (matches) {{
+                                option.removeAttribute("hidden");
+                                anyVisible = true;
+                            }} else {{
+                                option.setAttribute("hidden", "");
+                            }}
+                        }});
+                        if (projectNoMatch) {{
+                            if (anyVisible) {{
+                                projectNoMatch.setAttribute("hidden", "");
+                            }} else {{
+                                projectNoMatch.removeAttribute("hidden");
+                            }}
+                        }}
+                    }});
+                    // Focus the search box when the dropdown opens
+                    if (projectToggle) {{
+                        projectToggle.addEventListener("click", function() {{
+                            if (!projectPanel.hasAttribute("hidden")) {{
+                                projectSearch.focus();
+                            }}
+                        }});
+                    }}
+                }}
+
+                updateProjectLabel();
                 applyFilters();
             }})();
         </script>
@@ -512,10 +672,13 @@ def generate_reports(data):
         status_group = str(status).lower().replace("-", "")
         guardrail = item.get("guardrail", "Unknown")
         project = _extract_project(item.get("asset_name", ""))
+
+        # Logic to check if project override profile is present
+        profile_override_tooltip = _build_profile_override_tooltip(item)
         
         detailed_section += f"""
                     <tr data-row-type="item" data-status-group="{status_group}" data-guardrail="{guardrail}" data-project="{project}">
-                        <td><span class="status-badge status-{status}">{status}</span></td>
+                        <td class="status-cell"><span class="profile-override-gutter">{profile_override_tooltip}</span><span class="status-badge status-{status}">{status}</span></td>
                         <td>{item.get("guardrail", "")}</td>
                         <td>{item.get("validation", "")}</td>
                         <td>{item.get("description", "")}</td>
