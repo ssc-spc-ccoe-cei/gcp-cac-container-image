@@ -127,6 +127,26 @@ app = Flask(__name__)
 #----------------------------------------
 # HELPER FUNCTIONS
 #----------------------------------------
+def find_project_profile_tag(resource, tag_key):
+    """Return a project's effective profile tag, falling back to a direct tag.
+
+    Cloud Asset Inventory can expose a directly attached tag in ``tags`` before
+    the corresponding ``effective_tags`` entry is available. Prefer the
+    effective value so inherited profiles are supported, then fall back to the
+    direct value so those temporarily inconsistent results are not dropped.
+    """
+    for effective_tag_details in resource.effective_tags:
+        for tag in effective_tag_details.effective_tags:
+            if tag.tag_key.rsplit("/", 1)[-1] == tag_key:
+                return tag
+
+    for tag in resource.tags:
+        if tag.tag_key.rsplit("/", 1)[-1] == tag_key:
+            return tag
+
+    return None
+
+
 def decode_cert(cert_data):
     """Decodes cert data
     Args:
@@ -730,21 +750,32 @@ def org_project_profile_tag_export(asset_parent, project_profile_tag_key_list):
     ]
     tagged_projects_list = []
     for tag_key in project_profile_tag_key_list:
-        # querying for tagKeys for finding directly attached ONLY
-        # querying for effectiveTagKeys for finding directly attached or inherited tags, however, not all resources support effectiveTagKeys
-        request = asset_v1.SearchAllResourcesRequest(scope=asset_parent, query=f"effectiveTagKeys:{tag_key}")
+        # Direct tags can occasionally be present before Cloud Asset Inventory's
+        # effective-tag index is populated
+        # Search both indexes so directly attached and inherited project profiles are included.
+        request = asset_v1.SearchAllResourcesRequest(
+            scope=asset_parent,
+            asset_types=included_assets,
+            query=f"tagKeys:{tag_key} OR effectiveTagKeys:{tag_key}",
+        )
         page_result = asset_client.search_all_resources(request=request)
         for response in page_result:
-            if response.asset_type in included_assets:
-                for i in range(len(response.tags)):
-                    if response.tags[i].tag_key.endswith(tag_key):
-                        tagged_project = {"kind": "cloudresourcemanager#tagged#project", "name": response.name, "parent": response.parent_full_resource_name, "project_number": response.project, "asset_type": response.asset_type, "display_name": response.display_name, "tag_key": response.tags[i].tag_key, "tag_value": response.tags[i].tag_value}
-                        if tagged_project not in tagged_projects_list:
-                            tagged_projects_list.append(tagged_project)
-                        else:
-                            pass
-                    else:
-                        pass
+            profile_tag = find_project_profile_tag(response, tag_key)
+            if profile_tag is None:
+                continue
+
+            tagged_project = {
+                "kind": "cloudresourcemanager#tagged#project",
+                "name": response.name,
+                "parent": response.parent_full_resource_name,
+                "project_number": response.project,
+                "asset_type": response.asset_type,
+                "display_name": response.display_name,
+                "tag_key": profile_tag.tag_key,
+                "tag_value": profile_tag.tag_value,
+            }
+            if tagged_project not in tagged_projects_list:
+                tagged_projects_list.append(tagged_project)
     return json.dumps(tagged_projects_list, separators=(',', ':'))
 
 # Main API endpoint
