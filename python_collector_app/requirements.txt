@@ -287,6 +287,7 @@ google-api-core==2.32.0 \
     #   google-cloud-logging
     #   google-cloud-org-policy
     #   google-cloud-os-config
+    #   google-cloud-securitycentermanagement
     #   google-cloud-storage
 google-api-python-client==2.198.0 \
     --hash=sha256:dfe3e16fb241af6e9c460a33f65085b3450e05cea09364f6b5d8997fb7e43e2a \
@@ -306,6 +307,7 @@ google-auth==2.56.0 \
     #   google-cloud-logging
     #   google-cloud-org-policy
     #   google-cloud-os-config
+    #   google-cloud-securitycentermanagement
     #   google-cloud-storage
 google-auth-httplib2==0.4.0 \
     --hash=sha256:8e55cfafa3358cba85f6cad4a886138e88e158d71e7e5c9ee5936a5c1507fb91 \
@@ -345,6 +347,10 @@ google-cloud-os-config==1.25.0 \
     --hash=sha256:1b6f5f1da1f80f5796ca6098428324b2f32275e21b29ac08aa127e614c8dcb89 \
     --hash=sha256:2e02717d6a0dabe8f6ebf7b9b37eb28b5f70e3358bd7caf0cddbcf843b303da1
     # via google-cloud-asset
+google-cloud-securitycentermanagement==0.5.0 \
+    --hash=sha256:a310d98141a13ef3859b8cf2f8c156acfbdd5857adece813177fe564781622ff \
+    --hash=sha256:b53a4e7c6e59b90ed5bf8c26b2183870e78d89029ed7e370f5bdecb2c62002f4
+    # via -r requirements.in
 google-cloud-storage==3.13.0 \
     --hash=sha256:648af3ef8a6acc674e1359d3c920c67eb89a7a5ab66b336bd3ac43fed6b5ab84 \
     --hash=sha256:d11d8706ea1520fba0f21043bcb7897caf7015d76ce1ad9a4f60237e4d7a9f6c
@@ -404,6 +410,7 @@ grpc-google-iam-v1==0.14.4 \
     # via
     #   google-cloud-asset
     #   google-cloud-logging
+    #   google-cloud-securitycentermanagement
 grpcio==1.82.1 \
     --hash=sha256:011c8badee95734dee8bf05ce3464756a0ac3ebb8d443afd20c0e2b5e4640ad9 \
     --hash=sha256:06127691866e295c14e84a1fb86356dd962254f6abd0da4ca4b001eea9e89438 \
@@ -463,6 +470,7 @@ grpcio==1.82.1 \
     #   google-cloud-logging
     #   google-cloud-org-policy
     #   google-cloud-os-config
+    #   google-cloud-securitycentermanagement
     #   googleapis-common-protos
     #   grpc-google-iam-v1
     #   grpcio-status
@@ -640,6 +648,7 @@ proto-plus==1.28.1 \
     #   google-cloud-logging
     #   google-cloud-org-policy
     #   google-cloud-os-config
+    #   google-cloud-securitycentermanagement
 protobuf==7.35.1 \
     --hash=sha256:11d6b0ec246892d85215b0a13ca6e0233cf5284b68f0ac02646427f4ff88a799 \
     --hash=sha256:230a75ddfc2de4806e56696ce9640c1cdfdb6543b7cfce98d42a4c0a0e7bdb87 \
@@ -659,6 +668,7 @@ protobuf==7.35.1 \
     #   google-cloud-logging
     #   google-cloud-org-policy
     #   google-cloud-os-config
+    #   google-cloud-securitycentermanagement
     #   googleapis-common-protos
     #   grpc-google-iam-v1
     #   grpcio-status
