@@ -2,6 +2,7 @@
 # -*- coding: latin-1 -*-
 
 import google.cloud.asset_v1 as asset_v1
+import google.cloud.securitycentermanagement_v1 as scc_management_v1
 from google.protobuf.json_format import MessageToDict
 import google.cloud.logging
 import google.cloud.storage as storage
@@ -733,6 +734,52 @@ def breakglass_auth_export(days, breakglass_user_emails):
 
     return json.dumps(breakglass_auth_logs_list, separators=(',', ':'))
 
+# SCC Event Threat Detection custom module export
+def scc_etd_custom_module_export(asset_parent):
+    """Get Security Command Center Event Threat Detection (ETD) custom modules
+    Google API doc:
+        https://cloud.google.com/security-command-center/docs/reference/security-center-management/rest/v1/organizations.locations.eventThreatDetectionCustomModules/list
+
+    Cloud Asset Inventory exports these modules without their "config" block,
+    which is where the configurable detectors keep their inputs. Query the SCC
+    Management API directly so the policies can evaluate that config.
+
+    Args:
+        asset_parent: org ID (formatted)
+
+    Returns:
+        List of org-resident ETD custom modules, with their config
+    """
+    logger.info("Compiling SCC Event Threat Detection Custom Module Data")
+    etd_module_list = []
+    try:
+        scc_client = scc_management_v1.SecurityCenterManagementClient(credentials=credentials)
+        # listing at the org level returns org-resident modules only -- an org has no ancestors to inherit from
+        # the returned pager walks every page on iteration
+        modules = scc_client.list_event_threat_detection_custom_modules(
+            request={"parent": f"{asset_parent}/locations/global"}
+        )
+        for module in modules:
+            # config is a protobuf Struct -- to_dict renders it as plain JSON types
+            config = scc_management_v1.EventThreatDetectionCustomModule.to_dict(module).get("config", {})
+            etd_module_list.append({
+                "kind": "securitycentermanagement#etd#custommodule",
+                "name": module.name,
+                "displayName": module.display_name,
+                "type": module.type_,
+                "enablementState": module.enablement_state.name,
+                # flattened for the policies; only set on break-glass modules
+                "accounts": config.get("accounts", []),
+                "config": config,
+            })
+    except Exception as e:
+        # SCC ETD custom modules require a paid SCC tier -- an org without one
+        # has no modules to report, and the policies fall back to their other
+        # evidence paths rather than failing the whole evaluation
+        logger.error(f"Error retrieving SCC Event Threat Detection custom modules: {e}")
+        return json.dumps([])
+    return json.dumps(etd_module_list, separators=(',', ':'))
+
 # Project profile tag export
 def org_project_profile_tag_export(asset_parent, project_profile_tag_key_list):
     """Get projects with profile tags that override org profile level
@@ -830,7 +877,7 @@ def upload_json():
     overall_start_time = time.time()
 
     # Step 1: Export assets in parallel
-    logger.info("Step 1 of 12 - Export assets in parallel")
+    logger.info("Step 1 of 13 - Export assets in parallel")
     asset_data = parallelized_asset_export(asset_parent, content_type_list)
 
     # Prepare batch upload tasks
@@ -839,58 +886,63 @@ def upload_json():
     ]
 
     # Step 2: Logger export
-    logger.info("Step 2 of 12 - Logger export")
+    logger.info("Step 2 of 13 - Logger export")
     logger_data = json.loads(logger_export(logger_export_adminapis_admin, logger_resource_name))
     upload_tasks.append((logger_data, "data/logger.json"))
 
     # Step 3: GCS folder export
-    logger.info("Step 3 of 12 - GCS folder export")
+    logger.info("Step 3 of 13 - GCS folder export")
     gcs_folder_data = json.loads(gcs_export(gcs_folders, gcs_folder_objects, bucket_name))
     upload_tasks.append((gcs_folder_data, "data/gcs.json"))
 
     # Step 4: Essential Contacts export
-    logger.info("Step 4 of 12 - Essential Contacts export")
+    logger.info("Step 4 of 13 - Essential Contacts export")
     essentialcontacts_data = json.loads(essentialcontacts_export(asset_parent))
     upload_tasks.append((essentialcontacts_data, "data/essentialcontacts.json"))
 
     # Step 5: Workspace Users export
-    logger.info("Step 5 of 12 - Workspace Users export")
+    logger.info("Step 5 of 13 - Workspace Users export")
     ws_user_data = json.loads(workspace_users_export(ws_domain))
     upload_tasks.append((ws_user_data, "data/ws_users.json"))
 
     # Step 6: 25 hour GCP User auth data export
-    logger.info("Step 6 of 12 - GCP User Auth data export")
+    logger.info("Step 6 of 13 - GCP User Auth data export")
     user_auth_data = json.loads(user_auth_ip_export(25))
     upload_tasks.append((user_auth_data, "data/user_auth_data.json"))
 
     # Step 7: Org Admin Group members export
-    logger.info("Step 7 of 12 - Org Admin Group members export")
+    logger.info("Step 7 of 13 - Org Admin Group members export")
     org_admin_group_member_data = json.loads(org_admin_group_member_export(customer_id_parent, ws_domain, org_admin_group_email))
     upload_tasks.append((org_admin_group_member_data, "data/org_admin_group_members.json"))
 
     # Step 8: Asset tags export
-    logger.info("Step 8 of 12 - Asset tags export")
+    logger.info("Step 8 of 13 - Asset tags export")
     org_resource_tag_value_data = json.loads(org_resource_tag_value_export(asset_parent, tag_key_list))
     upload_tasks.append((org_resource_tag_value_data, "data/org_resource_tag_value_export.json"))
 
     # Step 9: Cert Manager export
-    logger.info("Step 9 of 12 - Cert manager export")
+    logger.info("Step 9 of 13 - Cert manager export")
     certmanager_data = json.loads(certmanager_export(certmanager_resource_id))
     upload_tasks.append((certmanager_data, "data/certmanager_export.json"))
 
     # Step 10: 366 days Breakglass Account auth data export
-    logger.info("Step 10 of 12 - GCP Breakglass User Auth data export")
+    logger.info("Step 10 of 13 - GCP Breakglass User Auth data export")
     breakglass_auth_data = json.loads(breakglass_auth_export(366, breakglass_user_emails))
     upload_tasks.append((breakglass_auth_data, "data/breakglass_auth_data.json"))
 
-    # Step 11: Project profile tag data
-    logger.info("Step 11 of 12 - Project Override Profile tag export")
+    # Step 11: SCC Event Threat Detection custom module export
+    logger.info("Step 11 of 13 - SCC Event Threat Detection custom module export")
+    scc_etd_module_data = json.loads(scc_etd_custom_module_export(asset_parent))
+    upload_tasks.append((scc_etd_module_data, "data/scc_etd_custom_modules.json"))
+
+    # Step 12: Project profile tag data
+    logger.info("Step 12 of 13 - Project Override Profile tag export")
     org_project_tag_data = json.loads(org_project_profile_tag_export(asset_parent, project_profile_tag_key_list))
     upload_tasks.append((org_project_tag_data, "data/org_project_tag_data.json"))
 
-    # # Step 12: Compile final data
-    logger.info("Step 12 of 12 - Compiling final data")
-    final_list = asset_data  + logger_data + gcs_folder_data + essentialcontacts_data + ws_user_data + user_auth_data + org_admin_group_member_data + org_resource_tag_value_data + certmanager_data + breakglass_auth_data + org_project_tag_data
+    # # Step 13: Compile final data
+    logger.info("Step 13 of 13 - Compiling final data")
+    final_list = asset_data  + logger_data + gcs_folder_data + essentialcontacts_data + ws_user_data + user_auth_data + org_admin_group_member_data + org_resource_tag_value_data + certmanager_data + breakglass_auth_data + scc_etd_module_data + org_project_tag_data
     compiled_data = {"input": {"data": final_list}}
     upload_tasks.append((compiled_data, "data/compiled.json"))
 

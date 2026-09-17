@@ -4,6 +4,7 @@ google-auth
 google-cloud-storage
 marshmallow
 google-cloud-asset
+google-cloud-securitycentermanagement
 protobuf
 google-cloud-logging
 google-api-python-client
