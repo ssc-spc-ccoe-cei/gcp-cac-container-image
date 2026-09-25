@@ -6,7 +6,7 @@ import google.cloud.securitycentermanagement_v1 as scc_management_v1
 from google.protobuf.json_format import MessageToDict
 import google.cloud.logging
 import google.cloud.storage as storage
-from google.api_core.exceptions import NotFound
+from google.api_core.exceptions import NotFound, ServiceUnavailable
 import google.auth
 from googleapiclient.discovery import build
 import concurrent.futures
@@ -51,6 +51,9 @@ policy_version = os.environ['POLICY_VERSION']
 app_version = os.environ['APP_VERSION']
 customer_id = os.environ['CUSTOMER_ID'] # your directory customer ID (`gcloud organizations list`)
 log_read_requests_per_min = int(os.environ.get("LOG_READ_REQUESTS_PER_MIN", 200))
+asset_export_timeout_seconds = float(os.environ.get("ASSET_EXPORT_TIMEOUT_SECONDS", 1800))
+asset_export_poll_retry_initial_seconds = 2.0
+asset_export_poll_retry_max_seconds = 20.0
 
 # your Workspace domain, if env var not provided,
 # it is implied you do not have a Workspace account, then use empty string '' as default
@@ -92,8 +95,6 @@ gcs_folders = [
     'guardrail-06', 'guardrail-07', 'guardrail-08', 'guardrail-09', 'guardrail-10',
     'guardrail-11', 'guardrail-12', 'guardrail-13', 
 ]
-
-gcs_folder_objects = []
 
 logger_export_adminapis_admin = (
     f'logName="organizations/{org_id}/logs/cloudaudit.googleapis.com%2Factivity"'
@@ -303,6 +304,61 @@ def batch_upload_json_to_gcs(bucket_name, upload_tasks):
 #----------------------------------------
 # DATA EXPORT FUNCTIONS
 #----------------------------------------
+class AssetExportError(RuntimeError):
+    """Raised when a complete, usable Cloud Asset export cannot be produced."""
+
+    def __init__(self, stage, failures):
+        self.stage = stage
+        self.failures = failures
+        failed_items = ", ".join(sorted(failures))
+        super().__init__(
+            f"Cloud Asset {stage} failed for: {failed_items}; "
+            "compliance evaluation aborted"
+        )
+
+
+def wait_for_asset_export(operation, content_type):
+    """Wait for an export, tolerating temporary operation-status outages."""
+    operation_name = operation.operation.name
+    deadline = time.monotonic() + asset_export_timeout_seconds
+    remaining_timeout = asset_export_timeout_seconds
+    retry_delay = asset_export_poll_retry_initial_seconds
+
+    while True:
+        try:
+            return operation.result(timeout=remaining_timeout)
+        except ServiceUnavailable as e:
+            # A completed operation returning 503 is an actual export failure.
+            # Only retry when the last known operation state is still running.
+            if operation.operation.done:
+                raise
+
+            remaining_timeout = deadline - time.monotonic()
+            if remaining_timeout <= 0:
+                raise concurrent.futures.TimeoutError(
+                    f"Operation did not complete within the designated timeout of "
+                    f"{asset_export_timeout_seconds:g} seconds."
+                ) from e
+
+            sleep_seconds = min(retry_delay, remaining_timeout)
+            logger.warning(
+                f"Status check for {content_type} export operation {operation_name} "
+                f"was temporarily unavailable; retrying in {sleep_seconds:g} seconds"
+            )
+            time.sleep(sleep_seconds)
+            remaining_timeout = deadline - time.monotonic()
+            if remaining_timeout <= 0:
+                raise concurrent.futures.TimeoutError(
+                    f"Operation did not complete within the designated timeout of "
+                    f"{asset_export_timeout_seconds:g} seconds."
+                ) from e
+
+            retry_delay = min(
+                retry_delay * 2,
+                asset_export_poll_retry_max_seconds,
+            )
+
+
 # Export assets to GCS
 def export_assets_to_gcs(asset_parent, content_type):
     client = asset_v1.AssetServiceClient(credentials=credentials)
@@ -310,56 +366,69 @@ def export_assets_to_gcs(asset_parent, content_type):
     export_output_path = f"gs://{bucket_name}/{export_output_name}"
     output_config = {"gcs_destination": {"uri": export_output_path}}
 
-    logger.info(f"Exporting {content_type} to {export_output_path}")
+    logger.info(
+        f"Exporting {content_type} to {export_output_path} "
+        f"(timeout: {asset_export_timeout_seconds:g} seconds)"
+    )
     operation = client.export_assets(
         request={"parent": asset_parent, "output_config": output_config, "content_type": content_type}
     )
-    operation.result()
+    logger.info(f"Started {content_type} export operation {operation.operation.name}")
+    wait_for_asset_export(operation, content_type)
     logger.info(f"Completed export for {content_type}")
     return export_output_name
 
 # Batch download JSON from GCS
 def download_from_gcs(bucket_name, file_names):
     def process_file(file_name):
-        try:
-            logger.info(f"Downloading {file_name} from Cloud Storage")
-            storage_client = storage.Client(credentials=credentials, project=project_id)
-            bucket = storage_client.bucket(bucket_name)
-            blob = bucket.blob(file_name)
+        logger.info(f"Downloading {file_name} from Cloud Storage")
+        storage_client = storage.Client(credentials=credentials, project=project_id)
+        bucket = storage_client.bucket(bucket_name)
+        blob = bucket.blob(file_name)
 
-            # Download and parse JSON data
-            json_data = blob.download_as_string().decode("utf-8").splitlines()
-            parsed_data = [json.loads(line) for line in json_data if line.strip()]
+        # Download and parse JSON data
+        json_data = blob.download_as_string().decode("utf-8").splitlines()
+        parsed_data = [json.loads(line) for line in json_data if line.strip()]
 
-            logger.info(f"Downloaded {file_name}")
-            return parsed_data
-        except Exception as e:
-            logger.error(f"Error processing {file_name}: {e}")
-            return []
+        logger.info(f"Downloaded {file_name}")
+        return parsed_data
 
     combined_data = []
+    failures = {}
     with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
         futures = {executor.submit(process_file, file_name): file_name for file_name in file_names}
         for future in concurrent.futures.as_completed(futures):
+            file_name = futures[future]
             try:
                 combined_data.extend(future.result())
             except Exception as e:
-                logger.error(f"Error in batch processing: {e}")
+                failures[file_name] = e
+                logger.error(f"Error processing asset export file {file_name}: {e}")
+
+    if failures:
+        raise AssetExportError("download", failures) from next(iter(failures.values()))
+
     return combined_data
 
 # Parallelized asset export
 def parallelized_asset_export(asset_parent, content_type_list):
     exported_files = []
+    failures = {}
     with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
         futures = {
             executor.submit(export_assets_to_gcs, asset_parent, content_type): content_type
             for content_type in content_type_list
         }
         for future in concurrent.futures.as_completed(futures):
+            content_type = futures[future]
             try:
                 exported_files.append(future.result())
             except Exception as e:
-                logger.error(f"Error in asset export: {e}")
+                failures[content_type] = e
+                logger.error(f"Error exporting Cloud Asset content type {content_type}: {e}")
+
+    if failures:
+        raise AssetExportError("export", failures) from next(iter(failures.values()))
 
     return download_from_gcs(bucket_name, exported_files)
 
@@ -378,8 +447,9 @@ def logger_export(filter_str1, logger_resource_name):
     return json.dumps(logs, separators=(',', ':'))
 
 # GCS folder export
-def gcs_export(gcs_folders, gcs_folder_objects, bucket_name):
+def gcs_export(gcs_folders, bucket_name):
     logger.info("Compiling GCS Data")
+    gcs_folder_objects = []
     client = storage.Client(credentials=credentials, project=project_id)
     for folder_name in gcs_folders:
         blobs = client.list_blobs(bucket_name, prefix=f"{folder_name}/")
@@ -878,7 +948,11 @@ def upload_json():
 
     # Step 1: Export assets in parallel
     logger.info("Step 1 of 13 - Export assets in parallel")
-    asset_data = parallelized_asset_export(asset_parent, content_type_list)
+    try:
+        asset_data = parallelized_asset_export(asset_parent, content_type_list)
+    except AssetExportError as e:
+        logger.error(f"CaC Compliance Evaluation failed: {e}")
+        return jsonify(message="CaC Compliance Evaluation failed", error=str(e)), 500
 
     # Prepare batch upload tasks
     upload_tasks = [
@@ -892,7 +966,7 @@ def upload_json():
 
     # Step 3: GCS folder export
     logger.info("Step 3 of 13 - GCS folder export")
-    gcs_folder_data = json.loads(gcs_export(gcs_folders, gcs_folder_objects, bucket_name))
+    gcs_folder_data = json.loads(gcs_export(gcs_folders, bucket_name))
     upload_tasks.append((gcs_folder_data, "data/gcs.json"))
 
     # Step 4: Essential Contacts export
