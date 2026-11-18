@@ -1,4 +1,6 @@
-FROM cgr.dev/chainguard/python:latest-dev AS python-build
+ARG PYTHON_VERSION=3.14.10
+
+FROM cgr.dev/chainguard/python:${PYTHON_VERSION}-dev AS python-build
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
   PYTHONUNBUFFERED=1 \
@@ -11,7 +13,7 @@ COPY --chown=nonroot:nonroot requirements.txt ./
 RUN python -m venv /home/nonroot/venv && \
   pip install --no-cache-dir -r requirements.txt
 
-FROM cgr.dev/chainguard/python:latest
+FROM cgr.dev/chainguard/python:${PYTHON_VERSION}
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
   PYTHONUNBUFFERED=1 \
