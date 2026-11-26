@@ -12,7 +12,14 @@ PATH="/opt/venv/bin:$PATH"
 WORKDIR /build
 
 COPY requirements.txt ./
-RUN ln -s /usr/local/bin/python /usr/bin/python && \
+RUN apt-get update && \
+apt-get install --yes --no-install-recommends \
+build-essential \
+libffi-dev \
+libssl-dev \
+pkg-config && \
+rm -rf /var/lib/apt/lists/* && \
+ln -s /usr/local/bin/python /usr/bin/python && \
 /usr/bin/python -m venv "$VIRTUAL_ENV" && \
 pip install -r requirements.txt && \
 pip uninstall --yes pip setuptools
@@ -35,4 +42,3 @@ EXPOSE 8080
 USER 65532:65532
 
 ENTRYPOINT ["/opt/venv/bin/python", "app.py"]
-
